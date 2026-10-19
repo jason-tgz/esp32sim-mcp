@@ -1,5 +1,4 @@
-# esp32sim test interaction script
-# Syntax: <timestamp_sec> <action> [args]
+# esp32sim action script: <emulated seconds> <action> [args]
 1.0 press btn1 150
 2.5 press btn1 150
 4.0 stop

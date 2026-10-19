@@ -5,3 +5,10 @@ coverage/
 .DS_Store
 *.tmp
 .env
+examples/*/build/
+examples/*/sdkconfig
+examples/*/sdkconfig.old
+examples/*/managed_components/
+examples/*/dependencies.lock
+.esp32sim-src/
+*.tgz

@@ -7,7 +7,7 @@ import { runExpect } from '../src/core/expect.js';
 import { spawnSync } from 'child_process';
 import { resolveEsp32SimBinary, resolveRomPath } from '../src/core/binary.js';
 import { SUPPORTED_BOARDS } from '../src/core/boards.js';
-import { FIXTURES_DIR, HAS_EMULATOR, HELLO_S3 } from './helpers.js';
+import { EXAMPLE_DIR, FIXTURES_DIR, HAS_EMULATOR, HAS_EXAMPLE_BUILD, HELLO_S3 } from './helpers.js';
 
 describe.skipIf(!HAS_EMULATOR)('End-to-End Real esp32sim Simulation', () => {
   it('boots real ESP32-S3 firmware and captures UART output', async () => {
@@ -113,5 +113,20 @@ describe.skipIf(!HAS_EMULATOR)('End-to-End Real esp32sim Simulation', () => {
       const out = spawnSync(bin, args, { encoding: 'utf-8', timeout: 20000 });
       expect(out.stderr + out.stdout, board.id).not.toMatch(/unknown board/i);
     }
+  });
+});
+
+describe.skipIf(!HAS_EMULATOR || !HAS_EXAMPLE_BUILD)('Freshly built ESP-IDF example', () => {
+  it('finds the build from the project directory and sees scripted button presses', async () => {
+    const res = await runExpect({
+      projectDir: EXAMPLE_DIR,
+      maxSeconds: 5,
+      script: path.join(EXAMPLE_DIR, 'test-button-script.txt'),
+      patterns: ['Hello from esp32sim-mcp', 'Button pressed (1)', 'Button pressed (2)'],
+    });
+
+    expect(res.diffSummary).toBeUndefined();
+    expect(res.passed).toBe(true);
+    expect(res.simResult.stopReason).toBe('script_stop');
   });
 });

@@ -6,30 +6,117 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  # The emulator version the E2E job builds and tests against; bump deliberately.
+  ESP32SIM_REPO: mikroverk/esp32sim
+  ESP32SIM_REF: f535f3b42293a76ab64c231a0425f35857ab6cf1
+
 jobs:
   test:
+    name: Unit tests (${{ matrix.os }}, Node ${{ matrix.node-version }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        node-version: [20.x, 22.x]
+        node-version: [22.x, 24.x]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
+      - run: npm ci
       - name: Type check
         run: npm run lint
-
-      - name: Run test suite
+      - name: Test suite (real-emulator tests skip here)
         run: npm test
-
       - name: Build dist
         run: npm run build
+
+  firmware:
+    name: Build example firmware with ESP-IDF
+    runs-on: ubuntu-latest
+    container: espressif/idf:v5.5.4
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: idf.py build (ESP32-S3)
+        shell: bash
+        run: |
+          . "$IDF_PATH/export.sh"
+          cd examples/hello-esp32
+          idf.py set-target esp32s3 build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hello-esp32-build
+          if-no-files-found: error
+          path: |
+            examples/hello-esp32/build/flasher_args.json
+            examples/hello-esp32/build/*.bin
+            examples/hello-esp32/build/*.elf
+            examples/hello-esp32/build/bootloader/bootloader.bin
+            examples/hello-esp32/build/partition_table/partition-table.bin
+
+  e2e:
+    name: End-to-end against the real emulator
+    needs: firmware
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check out esp32sim
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.ESP32SIM_REPO }}
+          ref: ${{ env.ESP32SIM_REF }}
+          path: .esp32sim-src
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: .esp32sim-src
+
+      - name: Build esp32sim
+        run: cargo build --release --locked --manifest-path .esp32sim-src/Cargo.toml -p esp32sim --bin esp32sim
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+      # Espressif's esp-rom-elfs release, pinned and SHA-256 checked by fetch-roms; never committed here
+      - uses: actions/cache@v4
+        with:
+          path: ~/.esp32sim/roms
+          key: rom-elfs-${{ hashFiles('src/core/roms.ts') }}
+      - name: Fetch mask ROMs
+        run: node dist/cli/index.js fetch-roms
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: hello-esp32-build
+          path: examples/hello-esp32/build
+
+      - name: Doctor
+        run: node dist/cli/index.js doctor
+        env:
+          ESP32SIM_PATH: ${{ github.workspace }}/.esp32sim-src/target/release/esp32sim
+
+      - name: Test suite, real-emulator tests required
+        run: npm test
+        env:
+          ESP32SIM_PATH: ${{ github.workspace }}/.esp32sim-src/target/release/esp32sim
+          ESP32SIM_REQUIRE_E2E: '1'
+
+      - name: CLI expect on the freshly built example
+        run: |
+          node dist/cli/index.js expect -p examples/hello-esp32 -s 5 \
+            --script examples/hello-esp32/test-button-script.txt \
+            --pattern "Hello from esp32sim-mcp" "Button pressed (2)"
+        env:
+          ESP32SIM_PATH: ${{ github.workspace }}/.esp32sim-src/target/release/esp32sim

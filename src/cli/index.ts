@@ -5,6 +5,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { runDoctor } from '../core/binary.js';
 import { AgentId, ALL_AGENTS, runInit } from '../core/init.js';
+import { DEFAULT_ROM_DIR, fetchRoms, ROM_RELEASE } from '../core/roms.js';
 import { getBoardsByChip, SUPPORTED_BOARDS } from '../core/boards.js';
 import { runExpect } from '../core/expect.js';
 import { runSimulation } from '../core/runner.js';
@@ -191,7 +192,26 @@ program
     console.log('');
   });
 
-// 6. Init command: writes MCP config and the agent skill for detected coding agents
+// 6. Fetch mask ROMs
+program
+  .command('fetch-roms')
+  .description(`Download Espressif's mask ROM ELFs (esp-rom-elfs ${ROM_RELEASE}, SHA-256 verified)`)
+  .option('-d, --dir <path>', 'Target directory', DEFAULT_ROM_DIR)
+  .action(async (opts) => {
+    try {
+      const res = await fetchRoms(opts.dir);
+      console.log(
+        res.downloaded
+          ? chalk.green(`✅ Mask ROMs from esp-rom-elfs ${ROM_RELEASE} saved to ${res.dir}`)
+          : chalk.gray(`· Mask ROMs already present in ${res.dir}`)
+      );
+    } catch (err: any) {
+      console.error(chalk.red('Could not fetch mask ROMs:'), err?.message || err);
+      process.exit(1);
+    }
+  });
+
+// 7. Init command: writes MCP config and the agent skill for detected coding agents
 program
   .command('init')
   .description('Detect coding agents (Claude Code, Codex, Cursor, Claude Desktop) and write MCP config + skill')

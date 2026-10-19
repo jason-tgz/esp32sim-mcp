@@ -58,7 +58,8 @@ export function resolveRomPath(chip: string, customRom?: string): string | undef
 
   const norm = chip.toLowerCase().replace(/[^a-z0-9]/g, '');
   // Same lookup order as esp32sim itself, plus our own ~/.esp32sim/roms
-  const espressifRoms = path.join(os.homedir(), '.espressif', 'tools', 'esp-rom-elfs');
+  const idfTools = process.env.IDF_TOOLS_PATH || path.join(os.homedir(), '.espressif');
+  const espressifRoms = path.join(idfTools, 'tools', 'esp-rom-elfs');
   let espressifVersions: string[] = [];
   try {
     espressifVersions = fs.readdirSync(espressifRoms).sort().reverse().map((v) => path.join(espressifRoms, v));
@@ -149,8 +150,8 @@ export function runDoctor(customPath?: string): DoctorResult {
   const missingRoms = ['esp32', 's3', 'c3', 'c6'].filter((c) => !resolveRomPath(c));
   if (missingRoms.length > 0) {
     recommendations.push(
-      `Mask ROM ELF not found for: ${missingRoms.join(', ')}. Install ESP-IDF (which ships esp-rom-elfs) ` +
-      'or put the *_rom.elf files in ~/.esp32sim/roms or $ESP32SIM_ROM_DIR. Without them only --boot app runs work.'
+      `Mask ROM ELF not found for: ${missingRoms.join(', ')}. Run \`npx esp32sim-mcp fetch-roms\` ` +
+      "(Espressif's esp-rom-elfs release into ~/.esp32sim/roms, SHA-256 verified), or install ESP-IDF."
     );
   }
 

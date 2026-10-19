@@ -55,7 +55,13 @@ If you don't have the `esp32sim` emulator binary installed yet, compile it direc
 cargo install --git https://github.com/mikroverk/esp32sim esp32sim
 ```
 
-A real ROM boot also needs Espressif's mask ROM ELFs (`esp32s3_rev0_rom.elf` and friends). They ship with ESP-IDF in `~/.espressif/tools/esp-rom-elfs/`, which is found automatically; otherwise put them in `~/.esp32sim/roms` or point `ESP32SIM_ROM_DIR` at them.
+A real ROM boot also needs Espressif's mask ROM ELFs (Apache-2.0). If ESP-IDF is installed they are found in its `esp-rom-elfs` tools directory; otherwise fetch the pinned release, SHA-256 verified, into `~/.esp32sim/roms`:
+
+```bash
+npx esp32sim-mcp fetch-roms
+```
+
+`ESP32SIM_ROM_DIR` points at another directory.
 
 ---
 
