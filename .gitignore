@@ -12,3 +12,9 @@ examples/*/managed_components/
 examples/*/dependencies.lock
 .esp32sim-src/
 *.tgz
+
+# PromptOps context snapshot
+.promptops/
+
+# PromptOps session assets
+.promptops-assets/

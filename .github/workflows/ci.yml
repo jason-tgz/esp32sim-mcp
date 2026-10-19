@@ -16,6 +16,8 @@ jobs:
   test:
     name: Unit tests (${{ matrix.os }}, Node ${{ matrix.node-version }})
     runs-on: ${{ matrix.os }}
+    # A `release: x.y.z` commit is tested by the Release workflow on its tag; skip the duplicate run on main
+    if: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'release:')) }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
@@ -39,6 +41,8 @@ jobs:
   e2e:
     name: End-to-end against the real emulator
     runs-on: ubuntu-latest
+    # A `release: x.y.z` commit is tested by the Release workflow on its tag; skip the duplicate run on main
+    if: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'release:')) }}
     steps:
       - uses: actions/checkout@v5
 

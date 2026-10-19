@@ -1,0 +1,91 @@
+name: Emulator binaries
+
+# Builds esp32sim at the pinned commit for the platforms `esp32sim-mcp setup` supports and attaches
+# the archives to the GitHub release `esp32sim-<rev>`. esp32sim publishes no binaries of its own;
+# it is MIT licensed, and its LICENSE ships inside every archive.
+# Run it after bumping ESP32SIM_REF, then copy the printed SHA-256s into src/core/emulator.ts.
+on:
+  workflow_dispatch:
+
+env:
+  ESP32SIM_REPO: mikroverk/esp32sim
+  ESP32SIM_REF: f535f3b42293a76ab64c231a0425f35857ab6cf1
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - id: tag
+        run: echo "tag=esp32sim-${ESP32SIM_REF::7}" >> "$GITHUB_OUTPUT"
+      - name: Create the release (once)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
+            gh release create "$TAG" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest=false \
+              --title "esp32sim ${ESP32SIM_REF::7} binaries" \
+              --notes "Prebuilt [esp32sim](https://github.com/$ESP32SIM_REPO) at commit $ESP32SIM_REF (MIT, see LICENSE in each archive), built by the emulator workflow. Installed and SHA-256 verified by \`npx esp32sim-mcp setup\`. Verify provenance with \`gh attestation verify <archive> -R $GITHUB_REPOSITORY\`."
+
+  build:
+    needs: release
+    name: ${{ matrix.asset }}
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write       # upload release assets
+      id-token: write       # build provenance
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { asset: darwin-arm64, os: macos-15, target: aarch64-apple-darwin }
+          - { asset: linux-x64, os: ubuntu-24.04, target: x86_64-unknown-linux-musl }
+          - { asset: linux-arm64, os: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl }
+    steps:
+      - name: Check out esp32sim
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.ESP32SIM_REPO }}
+          ref: ${{ env.ESP32SIM_REF }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: musl toolchain
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Build
+        run: cargo build --release --locked --target ${{ matrix.target }} -p esp32sim --bins
+
+      - name: Package
+        id: pkg
+        run: |
+          name="esp32sim-${ESP32SIM_REF::7}-${{ matrix.asset }}"
+          mkdir "$name"
+          for b in esp32sim esp32sim-c3 esp32sim-c6; do cp "target/${{ matrix.target }}/release/$b" "$name/"; done
+          cp LICENSE "$name/"
+          printf 'esp32sim (https://github.com/%s) at commit %s\ntarget %s, built by %s/%s/actions/runs/%s\n' \
+            "$ESP32SIM_REPO" "$ESP32SIM_REF" "${{ matrix.target }}" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$name/SOURCE.txt"
+          "./$name/esp32sim" --help 2>&1 | head -1
+          tar -czf "$name.tar.gz" "$name"
+          shasum -a 256 "$name.tar.gz" | tee "$name.tar.gz.sha256"
+          echo "archive=$name.tar.gz" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: ${{ steps.pkg.outputs.archive }}
+
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ needs.release.outputs.tag }}" -R "$GITHUB_REPOSITORY" --clobber "${{ steps.pkg.outputs.archive }}" "${{ steps.pkg.outputs.archive }}.sha256"
