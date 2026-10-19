@@ -13,5 +13,6 @@ export * from './core/expect.js';
 export * from './core/console.js';
 export * from './core/init.js';
 export * from './core/roms.js';
+export * from './core/emulator.js';
 export { VERSION } from './version.js';
 export * from './mcp/server.js';

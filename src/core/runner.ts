@@ -48,7 +48,7 @@ export async function runSimulation(options: SimRunOptions): Promise<SimResult> 
   if (!binaryPath) {
     throw new Error(
       'esp32sim binary not found in PATH or ~/.esp32sim/bin. ' +
-      `Build it with \`${ESP32SIM_INSTALL_COMMAND}\`, or run \`esp32sim-mcp doctor\`.`
+      `Run \`npx esp32sim-mcp setup\` to install it, or \`esp32sim-mcp doctor\` for other options.`
     );
   }
 

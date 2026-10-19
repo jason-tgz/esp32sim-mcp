@@ -141,8 +141,10 @@ describe('Doctor & Environment Check', () => {
 });
 
 describe('Pinned emulator version', () => {
-  it('tells users to install the esp32sim commit CI tests against', () => {
-    const ci = fs.readFileSync(path.resolve(__dirname, '../.github/workflows/ci.yml'), 'utf-8');
-    expect(ci).toContain(`ESP32SIM_REF: ${ESP32SIM_TESTED_REV}`);
+  it('builds the prebuilt emulator from the commit users are told to install', () => {
+    for (const workflow of ['emulator.yml']) {
+      const text = fs.readFileSync(path.resolve(__dirname, '../.github/workflows', workflow), 'utf-8');
+      expect(text, workflow).toContain(`ESP32SIM_REF: ${ESP32SIM_TESTED_REV}`);
+    }
   });
 });

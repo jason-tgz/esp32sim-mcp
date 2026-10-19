@@ -6,6 +6,7 @@ import * as path from 'path';
 import { runDoctor } from '../core/binary.js';
 import { AgentId, ALL_AGENTS, runInit } from '../core/init.js';
 import { DEFAULT_ROM_DIR, fetchRoms, ROM_RELEASE } from '../core/roms.js';
+import { DEFAULT_BIN_DIR, EMULATOR_RELEASE_TAG, installEmulator } from '../core/emulator.js';
 import { getBoardsByChip, SUPPORTED_BOARDS } from '../core/boards.js';
 import { runExpect } from '../core/expect.js';
 import { runSimulation } from '../core/runner.js';
@@ -212,7 +213,53 @@ program
     }
   });
 
-// 7. Init command: writes MCP config and the agent skill for detected coding agents
+// 7. Install the prebuilt emulator
+async function runInstallEmulator(dir: string, force: boolean): Promise<void> {
+  const res = await installEmulator(dir, force);
+  if (res.kept === 'user-managed') {
+    console.log(chalk.gray(`· Keeping the esp32sim already in ${res.dir} (not installed by esp32sim-mcp; --force replaces it)`));
+  } else if (res.downloaded) {
+    console.log(chalk.green(`✅ esp32sim (${EMULATOR_RELEASE_TAG}) installed in ${res.dir}`));
+  } else {
+    console.log(chalk.gray(`· esp32sim (${EMULATOR_RELEASE_TAG}) already installed in ${res.dir}`));
+  }
+}
+
+program
+  .command('install-emulator')
+  .description('Download the prebuilt esp32sim emulator for this platform (SHA-256 verified)')
+  .option('-d, --dir <path>', 'Target directory', DEFAULT_BIN_DIR)
+  .option('--force', 'Replace an esp32sim binary this tool did not install')
+  .action(async (opts) => {
+    try {
+      await runInstallEmulator(opts.dir, !!opts.force);
+    } catch (err: any) {
+      console.error(chalk.red('Could not install esp32sim:'), err?.message || err);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('setup')
+  .description('Install everything simulation needs: the prebuilt emulator and the mask ROMs')
+  .option('--force', 'Replace an esp32sim binary this tool did not install')
+  .action(async (opts) => {
+    try {
+      await runInstallEmulator(DEFAULT_BIN_DIR, !!opts.force);
+      const roms = await fetchRoms();
+      console.log(
+        roms.downloaded
+          ? chalk.green(`✅ Mask ROMs (esp-rom-elfs ${ROM_RELEASE}) saved to ${roms.dir}`)
+          : chalk.gray(`· Mask ROMs already present in ${roms.dir}`)
+      );
+      console.log(chalk.bold.green('\n🎉 Ready. Next: `npx esp32sim-mcp init` in your firmware project.\n'));
+    } catch (err: any) {
+      console.error(chalk.red('Setup failed:'), err?.message || err);
+      process.exit(1);
+    }
+  });
+
+// 8. Init command: writes MCP config and the agent skill for detected coding agents
 program
   .command('init')
   .description('Detect coding agents (Claude Code, Codex, Cursor, Claude Desktop) and write MCP config + skill')

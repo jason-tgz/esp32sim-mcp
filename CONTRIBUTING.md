@@ -29,7 +29,11 @@ docker run --rm -v "$PWD/examples/hello-esp32:/project" -w /project \
   espressif/idf:v5.5.4 idf.py set-target esp32s3 build
 ```
 
-`ESP32SIM_REQUIRE_E2E=1 npm test` turns a missing emulator, ROM or example build into a failure instead of a skip. CI runs that way, against the esp32sim commit pinned in `.github/workflows/ci.yml`. To move to a newer esp32sim, bump `ESP32SIM_REF` there and `ESP32SIM_TESTED_REV` in `src/core/binary.ts` together.
+`ESP32SIM_REQUIRE_E2E=1 npm test` turns a missing emulator, ROM or example build into a failure instead of a skip. CI runs that way, with the prebuilt emulator `setup` installs. To move to a newer esp32sim:
+
+1. Bump `ESP32SIM_REF` in `emulator.yml` and `ESP32SIM_TESTED_REV` in `src/core/binary.ts` (a test checks they match).
+2. Run the **Emulator binaries** workflow; it publishes the release `esp32sim-<rev>`.
+3. Copy the SHA-256 of each archive (its `.sha256` asset) into `EMULATOR_ASSETS` in `src/core/emulator.ts`.
 
 ## Guidelines
 

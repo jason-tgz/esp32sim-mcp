@@ -4,6 +4,14 @@ All notable changes are documented here. The project follows [Semantic Versionin
 
 ## [Unreleased]
 
+### Added
+- `setup` installs everything simulation needs in one command: a prebuilt esp32sim and the mask ROMs. `install-emulator` does the emulator alone.
+- Prebuilt esp32sim binaries for macOS arm64, Linux x64 and Linux arm64 (static), built from the pinned esp32sim commit by this repo's emulator workflow, with signed build provenance, SHA-256 verified on install. A manually built esp32sim in `~/.esp32sim/bin` is kept unless `--force`.
+
+### Changed
+- `doctor` points to `setup`; Cargo is only needed on platforms without a prebuilt binary.
+- CI's end-to-end job uses the prebuilt emulator, the same path users take, and a `release:` commit is no longer tested twice.
+
 ## [0.1.1] - 2026-10-19
 
 ### Fixed

@@ -1,8 +1,7 @@
-import { execFileSync } from 'child_process';
-import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { findFile, sha256, withVerifiedTarball } from './download.js';
 
 // Espressif's mask ROM ELFs (Apache-2.0, espressif/esp-rom-elfs), pinned by release and SHA-256
 // like esp32sim's tools/fetch-rom-elfs.sh, so every machine boots the same bytes.
@@ -18,26 +17,9 @@ const TARBALL_URL = `https://github.com/espressif/esp-rom-elfs/releases/download
 
 export const DEFAULT_ROM_DIR = path.join(os.homedir(), '.esp32sim', 'roms');
 
-function sha256(data: Buffer): string {
-  return createHash('sha256').update(data).digest('hex');
-}
-
 function hasValidRom(dir: string, name: string): boolean {
   const file = path.join(dir, name);
   return fs.existsSync(file) && sha256(fs.readFileSync(file)) === ROM_FILES[name];
-}
-
-function findFile(dir: string, name: string): string | undefined {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      const found = findFile(p, name);
-      if (found) return found;
-    } else if (entry.name === name) {
-      return p;
-    }
-  }
-  return undefined;
 }
 
 /**
@@ -47,17 +29,7 @@ export async function fetchRoms(dir: string = DEFAULT_ROM_DIR): Promise<{ dir: s
   const names = Object.keys(ROM_FILES);
   if (names.every((n) => hasValidRom(dir, n))) return { dir, downloaded: false };
 
-  const res = await fetch(TARBALL_URL);
-  if (!res.ok) throw new Error(`Download failed: ${TARBALL_URL} (HTTP ${res.status})`);
-  const tarball = Buffer.from(await res.arrayBuffer());
-  if (sha256(tarball) !== TARBALL_SHA256) throw new Error(`${TARBALL_URL}: SHA-256 mismatch`);
-
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'esp32sim-roms-'));
-  try {
-    const archive = path.join(tmp, 'roms.tar.gz');
-    fs.writeFileSync(archive, tarball);
-    execFileSync('tar', ['-xzf', archive, '-C', tmp]);
-
+  await withVerifiedTarball(TARBALL_URL, TARBALL_SHA256, (tmp) => {
     fs.mkdirSync(dir, { recursive: true });
     for (const name of names) {
       const src = findFile(tmp, name);
@@ -65,8 +37,6 @@ export async function fetchRoms(dir: string = DEFAULT_ROM_DIR): Promise<{ dir: s
       if (sha256(fs.readFileSync(src)) !== ROM_FILES[name]) throw new Error(`${name}: SHA-256 mismatch`);
       fs.copyFileSync(src, path.join(dir, name));
     }
-  } finally {
-    fs.rmSync(tmp, { recursive: true, force: true });
-  }
+  });
   return { dir, downloaded: true };
 }

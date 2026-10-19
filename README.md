@@ -10,13 +10,21 @@
 
 No physical development board. No cloud account or token.
 
-**Requirements:** Node.js 22+, the `esp32sim` emulator (built with Cargo, see below), and ESP-IDF to build firmware. Tested on macOS and Linux.
+**Requirements:** Node.js 22+ and ESP-IDF to build firmware. `npx esp32sim-mcp setup` installs the emulator (prebuilt for macOS arm64, Linux x64 and Linux arm64) and the mask ROMs. Tested on macOS and Linux.
 
 ---
 
 ## ⚡ 1-Minute Quickstart
 
-### 1. Configure your Agent
+### 1. Install the emulator
+
+```bash
+npx -y esp32sim-mcp setup
+```
+
+This downloads a prebuilt [esp32sim](https://github.com/mikroverk/esp32sim) into `~/.esp32sim/bin` and Espressif's mask ROM ELFs into `~/.esp32sim/roms`, both pinned and SHA-256 verified. The binaries are built from source by this repo's [emulator workflow](.github/workflows/emulator.yml) with signed build provenance (`gh attestation verify <archive> -R stramanu/esp32sim-mcp`).
+
+### 2. Configure your Agent
 From your firmware project, detect installed agents (Claude Code, Codex, Cursor) and register the MCP server plus the `esp32sim` skill that teaches the write → build → simulate → verify loop:
 
 ```bash
@@ -47,24 +55,19 @@ Or add it manually to any `mcpServers` config:
 }
 ```
 
-### 2. Verify Your Environment
+### 3. Verify Your Environment
 ```bash
 npx esp32sim-mcp doctor
 ```
 
-If you don't have the `esp32sim` emulator yet, build it with Cargo ([rustup](https://rustup.rs) installs Rust). esp32sim is not on crates.io, so it comes from git, pinned to the commit this release is tested against (a few minutes the first time):
+#### Platforms without a prebuilt emulator
+
+Build esp32sim with Cargo ([rustup](https://rustup.rs) installs Rust). It is not on crates.io, so it comes from git, pinned to the commit this release is tested against:
 ```bash
 cargo install --locked --git https://github.com/mikroverk/esp32sim --rev f535f3b42293a76ab64c231a0425f35857ab6cf1 esp32sim
-```
-It lands in `~/.cargo/bin`, where it is found automatically; `ESP32SIM_PATH` points at a binary elsewhere.
-
-A real ROM boot also needs Espressif's mask ROM ELFs (Apache-2.0). If ESP-IDF is installed they are found in its `esp-rom-elfs` tools directory; otherwise fetch the pinned release, SHA-256 verified, into `~/.esp32sim/roms`:
-
-```bash
 npx esp32sim-mcp fetch-roms
 ```
-
-`ESP32SIM_ROM_DIR` points at another directory.
+The binary lands in `~/.cargo/bin`, where it is found automatically. `ESP32SIM_PATH` points at a binary elsewhere and `ESP32SIM_ROM_DIR` at another ROM directory; ROMs in an ESP-IDF install are found automatically.
 
 ---
 
@@ -102,7 +105,7 @@ esp32sim-mcp expect --script ./test-button-script.txt --pattern "Button pressed"
 # Supported boards, environment check, mask ROM download
 esp32sim-mcp list
 esp32sim-mcp doctor
-esp32sim-mcp fetch-roms
+esp32sim-mcp setup          # or install-emulator / fetch-roms separately
 ```
 
 `examples/hello-esp32` is a small ESP-IDF project with a button script; CI builds it and runs it this way.
@@ -171,7 +174,7 @@ WiFi (virtual access point) works on all four chips. BLE is not exposed by this 
 
 ## ⚠️ Limitations
 
-- The emulator is not bundled: build `esp32sim` with Cargo once (see above). `doctor` tells you what is missing.
+- Prebuilt emulator binaries cover macOS arm64 and Linux x64/arm64; elsewhere build `esp32sim` with Cargo. `doctor` tells you what is missing.
 - The agent builds firmware itself with ESP-IDF (`idf.py build`); there is no build tool in the MCP server.
 - Windows is untested.
 - An emulator is not silicon: peripherals esp32sim does not model, RF timing and BLE are out of reach. Confirm on hardware before you ship.

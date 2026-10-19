@@ -4,7 +4,11 @@ import * as os from 'os';
 import * as path from 'path';
 import { DoctorResult } from './types.js';
 
-// The esp32sim commit CI tests against (keep in sync with ESP32SIM_REF in .github/workflows/ci.yml).
+// Hosts with a prebuilt esp32sim (see emulator.ts); kept here to avoid an import cycle
+const PREBUILT_HOSTS = ['darwin-arm64', 'linux-x64', 'linux-arm64'];
+
+// The esp32sim commit the prebuilt binaries come from and CI tests against
+// (keep in sync with ESP32SIM_REF in .github/workflows/emulator.yml; a test checks it).
 // esp32sim is not on crates.io and publishes no binaries, so it is built from git.
 export const ESP32SIM_TESTED_REV = 'f535f3b42293a76ab64c231a0425f35857ab6cf1';
 export const ESP32SIM_INSTALL_COMMAND =
@@ -149,15 +153,17 @@ export function runDoctor(customPath?: string): DoctorResult {
     }
   } else {
     recommendations.push(
-      `esp32sim emulator is not installed. Build it with \`${ESP32SIM_INSTALL_COMMAND}\` ` +
-        '(needs Rust: https://rustup.rs), or set ESP32SIM_PATH to an existing binary.'
+      PREBUILT_HOSTS.includes(`${platform}-${arch}`)
+        ? 'esp32sim emulator is not installed. Run `npx esp32sim-mcp setup` (prebuilt binary + mask ROMs, SHA-256 verified).'
+        : `esp32sim emulator is not installed and there is no prebuilt binary for ${platform}-${arch}. ` +
+          `Build it with \`${ESP32SIM_INSTALL_COMMAND}\` (needs Rust: https://rustup.rs), or set ESP32SIM_PATH.`
     );
   }
 
   const missingRoms = ['esp32', 's3', 'c3', 'c6'].filter((c) => !resolveRomPath(c));
   if (missingRoms.length > 0) {
     recommendations.push(
-      `Mask ROM ELF not found for: ${missingRoms.join(', ')}. Run \`npx esp32sim-mcp fetch-roms\` ` +
+      `Mask ROM ELF not found for: ${missingRoms.join(', ')}. Run \`npx esp32sim-mcp setup\` or \`fetch-roms\` ` +
       "(Espressif's esp-rom-elfs release into ~/.esp32sim/roms, SHA-256 verified), or install ESP-IDF."
     );
   }
@@ -170,7 +176,9 @@ export function runDoctor(customPath?: string): DoctorResult {
     rustInstalled = true;
     rustVersion = cargoOut;
   } catch {
-    if (!esp32simFound) recommendations.push('Rust/Cargo is not installed. Install it from https://rustup.rs, then build esp32sim as above.');
+    if (!esp32simFound && !PREBUILT_HOSTS.includes(`${platform}-${arch}`)) {
+      recommendations.push('Rust/Cargo is not installed. Install it from https://rustup.rs, then build esp32sim as above.');
+    }
   }
 
   // Check ESP-IDF environment (optional, for compiling from source)
