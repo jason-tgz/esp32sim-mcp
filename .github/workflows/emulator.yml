@@ -48,7 +48,8 @@ jobs:
         include:
           - { asset: darwin-arm64, os: macos-15, target: aarch64-apple-darwin }
           - { asset: linux-x64, os: ubuntu-24.04, target: x86_64-unknown-linux-musl }
-          - { asset: linux-arm64, os: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl }
+          # The aarch64 JIT calls __clear_cache, which static musl links only get from libgcc
+          - { asset: linux-arm64, os: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl, rustflags: '-C link-arg=-lgcc' }
     steps:
       - name: Check out esp32sim
         uses: actions/checkout@v5
@@ -66,6 +67,8 @@ jobs:
 
       - name: Build
         run: cargo build --release --locked --target ${{ matrix.target }} -p esp32sim --bins
+        env:
+          RUSTFLAGS: ${{ matrix.rustflags }}
 
       - name: Package
         id: pkg
@@ -85,7 +88,15 @@ jobs:
         with:
           subject-path: ${{ steps.pkg.outputs.archive }}
 
+      # Published archives are immutable (their hashes ship in the npm package): only missing ones are added
       - name: Upload to the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ needs.release.outputs.tag }}" -R "$GITHUB_REPOSITORY" --clobber "${{ steps.pkg.outputs.archive }}" "${{ steps.pkg.outputs.archive }}.sha256"
+          TAG: ${{ needs.release.outputs.tag }}
+          ARCHIVE: ${{ steps.pkg.outputs.archive }}
+        run: |
+          if gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | grep -qx "$ARCHIVE"; then
+            echo "$ARCHIVE is already published; keeping it"
+          else
+            gh release upload "$TAG" -R "$GITHUB_REPOSITORY" "$ARCHIVE" "$ARCHIVE.sha256"
+          fi
