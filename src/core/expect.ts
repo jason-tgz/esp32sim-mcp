@@ -102,6 +102,10 @@ export function checkExpectations(
  * Runs simulation and asserts expected UART output
  */
 export async function runExpect(options: ExpectOptions): Promise<ExpectResult> {
+  // An expectation with nothing to expect would pass without checking anything
+  if (!Array.isArray(options.patterns) || options.patterns.length === 0) {
+    throw new Error('`patterns` is required: pass at least one string or regex expected on the console.');
+  }
   const simResult: SimResult = await runSimulation(options);
 
   const check = checkExpectations(simResult.uartLogs, options.patterns, {

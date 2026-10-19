@@ -37,6 +37,14 @@ describe('MCP Server Implementation', () => {
     expect(text).not.toContain('atech14');
   });
 
+  it('sim_expect without patterns is an error, not a vacuous pass', async () => {
+    for (const args of [{}, { patterns: [] }]) {
+      const res = await client.callTool({ name: 'sim_expect', arguments: args });
+      expect(res.isError).toBe(true);
+      expect(textOf(res)).toContain('`patterns` is required');
+    }
+  });
+
   it.skipIf(!HAS_EMULATOR)('sim_run with default arguments boots to app_main', async () => {
     const res = await client.callTool({ name: 'sim_run', arguments: { ...HELLO_S3, maxSeconds: 1 } });
     const text = textOf(res);
