@@ -4,6 +4,11 @@ All notable changes are documented here. The project follows [Semantic Versionin
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-10-19
+
+### Fixed
+- `sim_expect` called without patterns (or with an empty list) passed without checking anything; it is now an error that says what is missing. Found while recording the demo: the agent's first call had no arguments.
+
 ## [0.2.2] - 2026-10-19
 
 ### Changed
