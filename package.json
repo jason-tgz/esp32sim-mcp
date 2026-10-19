@@ -9,7 +9,7 @@
   },
   "files": [
     "dist",
-    "skills",
+    "plugin/skills",
     "README.md",
     "LICENSE"
   ],
@@ -20,7 +20,7 @@
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
     "prepublishOnly": "npm run build && npm test",
-    "version": "node scripts/sync-version.mjs && git add server.json .claude-plugin/plugin.json"
+    "version": "node scripts/sync-version.mjs && git add server.json plugin/.claude-plugin/plugin.json"
   },
   "keywords": [
     "esp32",

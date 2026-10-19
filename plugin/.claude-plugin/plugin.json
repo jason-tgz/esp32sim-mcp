@@ -9,6 +9,9 @@
   },
   "homepage": "https://github.com/stramanu/esp32sim-mcp",
   "repository": "https://github.com/stramanu/esp32sim-mcp",
+  "documentationUrl": "https://github.com/stramanu/esp32sim-mcp#readme",
+  "supportUrl": "https://github.com/stramanu/esp32sim-mcp/issues",
+  "privacyPolicyUrl": "https://github.com/stramanu/esp32sim-mcp/blob/main/PRIVACY.md",
   "license": "MIT",
   "keywords": [
     "esp32",

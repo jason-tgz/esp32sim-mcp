@@ -39,5 +39,5 @@ docker run --rm -v "$PWD/examples/hello-esp32:/project" -w /project \
 
 - Keep the wrapper faithful to esp32sim's CLI (`docs/cli.md` upstream). If you add a flag, board or script action, check it against a real run and add a test.
 - Behaviour an agent relies on (tool names, inputs, output shape) is the public API: change it deliberately and note it in `CHANGELOG.md`.
-- Update `skills/esp32sim/SKILL.md` when tool behaviour changes; it is what agents read.
+- Update `plugin/skills/esp32sim/SKILL.md` when tool behaviour changes; it is what agents read. The npm package (`init`) and the Claude Code plugin (`plugin/`) both ship it from there.
 - Run `npm run lint && npm test` before opening a pull request.

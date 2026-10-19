@@ -10,8 +10,8 @@ export const ALL_AGENTS: AgentId[] = ['claude-code', 'codex', 'cursor', 'claude-
 export const SERVER_NAME = 'esp32sim';
 export const SERVER_ENTRY = { command: 'npx', args: ['-y', 'esp32sim-mcp', 'serve'] };
 
-// Ships next to dist/ and src/ in the package: <pkg>/skills/esp32sim
-export const SKILL_SOURCE_DIR = fileURLToPath(new URL('../../skills/esp32sim', import.meta.url));
+// The skill lives in the Claude Code plugin folder and ships in the npm package from there
+export const SKILL_SOURCE_DIR = fileURLToPath(new URL('../../plugin/skills/esp32sim', import.meta.url));
 
 export interface InitOptions {
   cwd: string;

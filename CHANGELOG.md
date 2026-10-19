@@ -4,6 +4,13 @@ All notable changes are documented here. The project follows [Semantic Versionin
 
 ## [Unreleased]
 
+### Changed
+- The Claude Code plugin lives in `plugin/` (manifest, icon and the skill) instead of the repository root, so installing it no longer pulls the sources, tests and firmware fixtures. The skill's single source is `plugin/skills/esp32sim/SKILL.md`, which the npm package ships for `init`.
+- The plugin declares its documentation, support and privacy policy links.
+
+### Added
+- [PRIVACY.md](PRIVACY.md): no data collection; what network access happens and when.
+
 ## [0.2.6] - 2026-10-19
 
 ### Changed

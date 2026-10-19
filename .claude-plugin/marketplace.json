@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "esp32sim",
-      "source": "./",
+      "source": "./plugin",
       "description": "Boot and test ESP32 firmware in a local emulator: MCP server plus the esp32sim skill.",
       "category": "development"
     }

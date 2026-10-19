@@ -14,7 +14,7 @@ update('server.json', (s) => {
   s.version = version;
   for (const p of s.packages) p.version = version;
 });
-update('.claude-plugin/plugin.json', (p) => {
+update('plugin/.claude-plugin/plugin.json', (p) => {
   p.version = version;
   // The plugin directory requires npx launchers pinned to an exact version
   p.mcpServers.esp32sim.args = ['-y', `esp32sim-mcp@${version}`, 'serve'];
