@@ -24,7 +24,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "esp32sim-mcp",
+        "esp32sim-mcp@0.2.5",
         "serve"
       ]
     }

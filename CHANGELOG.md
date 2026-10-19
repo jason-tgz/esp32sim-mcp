@@ -4,6 +4,12 @@ All notable changes are documented here. The project follows [Semantic Versionin
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-10-19
+
+### Changed
+- The Claude Code plugin pins its launcher to the exact package version (`esp32sim-mcp@x.y.z`), as the plugin directory requires; `npm version` keeps the pin in step.
+- Plugin icon.
+
 ## [0.2.5] - 2026-10-19
 
 ### Added

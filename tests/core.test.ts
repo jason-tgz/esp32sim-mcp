@@ -174,6 +174,8 @@ describe('Release manifests', () => {
     expect(server.version).toBe(pkg.version);
     expect(server.packages[0]).toMatchObject({ identifier: pkg.name, version: pkg.version });
     expect(server.description.length).toBeLessThanOrEqual(100);
-    expect(read('.claude-plugin/plugin.json').version).toBe(pkg.version);
+    const plugin = read('.claude-plugin/plugin.json');
+    expect(plugin.version).toBe(pkg.version);
+    expect(plugin.mcpServers.esp32sim.args).toEqual(['-y', `esp32sim-mcp@${pkg.version}`, 'serve']);
   });
 });
