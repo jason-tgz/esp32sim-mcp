@@ -6,9 +6,11 @@
 [![npm version](https://img.shields.io/npm/v/esp32sim-mcp.svg)](https://www.npmjs.com/package/esp32sim-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**esp32sim-mcp** gives any AI coding agent (Claude Code, Cursor, Codex, Antigravity) the superpower to compile, boot, interact with, and test ESP32 firmware in a local instruction-level emulator.
+**esp32sim-mcp** lets an AI coding agent (Claude Code, Codex, Cursor, or any MCP client) boot, drive and test the ESP32 firmware it builds with ESP-IDF, inside the local [esp32sim](https://github.com/mikroverk/esp32sim) emulator: real mask ROM, real bootloader, unmodified binaries.
 
-No physical development board. No cloud tokens. Unmodified binaries.
+No physical development board. No cloud account or token.
+
+**Requirements:** Node.js 22+, the `esp32sim` emulator (built with Cargo, see below), and ESP-IDF to build firmware. Tested on macOS and Linux.
 
 ---
 
@@ -50,10 +52,11 @@ Or add it manually to any `mcpServers` config:
 npx esp32sim-mcp doctor
 ```
 
-If you don't have the `esp32sim` emulator binary installed yet, compile it directly with Cargo:
+If you don't have the `esp32sim` emulator yet, build it with Cargo ([rustup](https://rustup.rs) installs Rust):
 ```bash
 cargo install --git https://github.com/mikroverk/esp32sim esp32sim
 ```
+It lands in `~/.cargo/bin`, where it is found automatically; `ESP32SIM_PATH` points at a binary elsewhere.
 
 A real ROM boot also needs Espressif's mask ROM ELFs (Apache-2.0). If ESP-IDF is installed they are found in its `esp-rom-elfs` tools directory; otherwise fetch the pinned release, SHA-256 verified, into `~/.esp32sim/roms`:
 
@@ -76,7 +79,9 @@ When connected, coding agents gain access to the following specialized tools:
 | `sim_expect` | `patterns` (strings or regexes), `ordered` | Pass/Fail status, matched lines, diff of missing line | Asserts expected UART output for autonomous Red-Green-Refactor testing loops. |
 | `sim_screenshot` | `board` (e.g. `atech14`), `timeSeconds` | PNG image & base64 data | Captures the virtual ST7735/ST7789/ST7701S/CO5300 display buffer at specific emulated moment. |
 | `sim_list_boards` | `chip` (optional: `s3`, `c3`, `c6`, `esp32`) | Board specs & peripherals | Catalogs supported chips, CPU cores, displays, and peripheral buttons. |
-| `sim_doctor` | none | Environment health report | Checks `esp32sim` binary, Rust toolchain, and host architecture. |
+| `sim_doctor` | none | Environment health report | Checks the `esp32sim` binary and mask ROMs, and says how to install what is missing. |
+
+By default both UART0 and the USB-Serial/JTAG console are captured, so output shows up whichever console the project logs to; lines ESP-IDF mirrors on both are shown once. `wifi` (e.g. `ssid=demo,psk=secret`) attaches a virtual access point with DHCP, DNS and NAT.
 
 ---
 
@@ -85,21 +90,22 @@ When connected, coding agents gain access to the following specialized tools:
 The same tools are available via CLI with stable exit codes (0 = pass, 1 = fail), making them drop-in ready for GitHub Actions CI:
 
 ```bash
-# Run simulation for 5 emulated seconds
-esp32sim-mcp run --chip s3 --max-seconds 5
+# Run the ESP-IDF build in the current project for 5 emulated seconds
+esp32sim-mcp run --max-seconds 5
 
-# Automated test asserting UART output
-esp32sim-mcp expect --pattern "Loading app..." "WiFi connected" "HTTP Server listening"
+# Assert UART output (patterns in order), on a virtual WiFi network
+esp32sim-mcp expect --wifi "ssid=demo,psk=demo-pass" --pattern "app_main" "GOT_IP"
 
-# Run with interactive button press script
-esp32sim-mcp run --script ./test-script.txt
+# Drive buttons from a timed action script
+esp32sim-mcp expect --script ./test-button-script.txt --pattern "Button pressed"
 
-# Inspect supported chips and boards
+# Supported boards, environment check, mask ROM download
 esp32sim-mcp list
-
-# Check environment health
 esp32sim-mcp doctor
+esp32sim-mcp fetch-roms
 ```
+
+`examples/hello-esp32` is a small ESP-IDF project with a button script; CI builds it and runs it this way.
 
 ---
 
@@ -133,18 +139,22 @@ esp32sim-mcp doctor
 ### Auto-Discovery of Firmware
 `esp32sim-mcp` automatically detects ESP-IDF build artifacts:
 - Parses `build/flasher_args.json` to extract precise bootloader, partition table, and application binaries without manual path configuration.
-- Supports both multi-binary ROM boot (`--boot rom`) and single application ELF/binary boot (`--boot app`).
+- With bootloader, partition table and app it boots through the real mask ROM (`--boot rom`); an app image alone is loaded directly (`--boot app`).
 
 ---
 
 ## 🎯 Supported Chips & Boards
 
-Powered by [esp32sim](https://github.com/mikroverk/esp32sim) by mikroverk:
+Powered by [esp32sim](https://github.com/mikroverk/esp32sim). `sim_list_boards` / `esp32sim-mcp list` show the details.
 
-- **ESP32-S3 (Dual Xtensa LX7 @ 240MHz):** Mature. Emulates JIT execution (~30x faster than real-time), ST7701S RGB display (480x480), audio SID player, camera sensor, buttons, rotary encoder, and Wi-Fi.
-- **ESP32-C3 (RISC-V RV32IMC @ 160MHz):** Mature console & Wi-Fi emulation.
-- **ESP32-C6 (RISC-V RV32IMAC @ 160MHz):** Draft. Waveshare 1.47" LCD with 802.15.4 Zigbee/Thread radio model.
-- **Classic ESP32 (Dual Xtensa LX6 @ 240MHz):** Early. LilyGO TTGO T-Display model.
+| Chip | Boards (`board`) |
+| --- | --- |
+| ESP32-S3 | `atech14` (default: ST7735 TFT, buttons, rotary encoder, LED ring, audio), `waveshare-lcd4b` (480x480 touch), `waveshare-amoled18-v2` (368x448 AMOLED touch), `waveshare-cam` (OV5640 camera), `none` |
+| ESP32-C3 | console only (no board models) |
+| ESP32-C6 | `waveshare-c6-lcd147` (172x320 LCD), `none` |
+| ESP32 (classic) | `ttgo-tdisplay` (135x240 TFT), `esp32dev-loopback`, `none` |
+
+WiFi (virtual access point) works on all four chips. BLE is not exposed by this wrapper.
 
 ---
 

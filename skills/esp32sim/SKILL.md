@@ -18,7 +18,7 @@ When tasked with building or testing an ESP32 feature, follow this loop:
 └──────────────────────────┬─────────────────────────────┘
                            ▼
 ┌────────────────────────────────────────────────────────┐
-│ 2. Compile with ESP-IDF or PlatformIO                  │
+│ 2. Compile with ESP-IDF                                │
 │    `idf.py build` (creates build/flasher_args.json)    │
 └──────────────────────────┬─────────────────────────────┘
                            ▼
@@ -36,6 +36,8 @@ When tasked with building or testing an ESP32 feature, follow this loop:
 │ 5. Fix Code and Re-run Simulation                      │
 └────────────────────────────────────────────────────────┘
 ```
+
+Other build systems (PlatformIO, Arduino): pass `appBin`, `bootloaderBin` and `ptableBin` explicitly instead of `projectDir`.
 
 ## Available MCP Tools
 
