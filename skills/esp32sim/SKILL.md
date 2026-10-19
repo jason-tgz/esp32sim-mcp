@@ -39,6 +39,22 @@ When tasked with building or testing an ESP32 feature, follow this loop:
 
 Other build systems (PlatformIO, Arduino): pass `appBin`, `bootloaderBin` and `ptableBin` explicitly instead of `projectDir`.
 
+## Building the Firmware
+
+Pick the first option that works; check before you build:
+
+1. **Local ESP-IDF.** If `idf.py --version` works (or `$IDF_PATH` is set: run `. "$IDF_PATH/export.sh"` first), use it directly.
+2. **Docker, when ESP-IDF is not installed.** If `docker info` succeeds, build with Espressif's official image instead of installing ESP-IDF. Run from the project root:
+   ```bash
+   docker run --rm -v "$PWD:/project" -w /project espressif/idf:v5.5.4 idf.py set-target esp32s3 build
+   ```
+   - `set-target` is needed only the first time or when changing chip (it wipes `build/`); afterwards run `idf.py build` the same way. Use the chip the user targets: `esp32`, `esp32s3`, `esp32c3`, `esp32c6`.
+   - On Linux add `-u "$(id -u):$(id -g)" -e HOME=/tmp` so `build/` is not owned by root. Not needed on macOS or Windows.
+   - The first run pulls a multi-GB image once; tell the user it is downloading. Later builds take seconds to a couple of minutes.
+   - If the project pins another ESP-IDF version (the `ESP-IDF` line at the top of `sdkconfig`, or `idf` in `dependencies.lock`), use the matching `espressif/idf:vX.Y.Z` tag.
+   - The output lands in the project's `build/` as usual, so `sim_*` tools find it through `projectDir`.
+3. **Neither available.** Do not install ESP-IDF on your own initiative: it downloads several GB and takes a long time. Tell the user, and offer Docker Desktop or the ESP-IDF installer, and let them choose.
+
 ## Available MCP Tools
 
 ### 1. `sim_run`

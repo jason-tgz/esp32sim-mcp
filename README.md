@@ -10,7 +10,7 @@
 
 No physical development board. No cloud account or token.
 
-**Requirements:** Node.js 22+ and ESP-IDF to build firmware. `npx esp32sim-mcp setup` installs the emulator (prebuilt for macOS arm64, Linux x64 and Linux arm64) and the mask ROMs. Tested on macOS and Linux.
+**Requirements:** Node.js 22+, and ESP-IDF or Docker to build firmware. `npx esp32sim-mcp setup` installs the emulator (prebuilt for macOS arm64, Linux x64 and Linux arm64) and the mask ROMs. Tested on macOS and Linux.
 
 ---
 
@@ -122,7 +122,7 @@ esp32sim-mcp setup          # or install-emulator / fetch-roms separately
 └─────────────────────┬─────────────────────┘
                       ▼
 ┌───────────────────────────────────────────┐
-│ 2. Compile: `idf.py build`                │
+│ 2. Compile: `idf.py build` (or in Docker) │
 └─────────────────────┬─────────────────────┘
                       ▼
 ┌───────────────────────────────────────────┐
@@ -175,7 +175,7 @@ WiFi (virtual access point) works on all four chips. BLE is not exposed by this 
 ## ⚠️ Limitations
 
 - Prebuilt emulator binaries cover macOS arm64 and Linux x64/arm64; elsewhere build `esp32sim` with Cargo. `doctor` tells you what is missing.
-- The agent builds firmware itself with ESP-IDF (`idf.py build`); there is no build tool in the MCP server.
+- The agent builds firmware itself (`idf.py build`); there is no build tool in the MCP server. Without a local ESP-IDF, the skill has it build in Espressif's `espressif/idf` Docker image instead of installing the toolchain.
 - Windows is untested.
 - An emulator is not silicon: peripherals esp32sim does not model, RF timing and BLE are out of reach. Confirm on hardware before you ship.
 

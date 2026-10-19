@@ -4,6 +4,11 @@ All notable changes are documented here. The project follows [Semantic Versionin
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-19
+
+### Changed
+- The agent skill now says how to build: local ESP-IDF if present, otherwise Espressif's `espressif/idf` Docker image (with the Linux user mapping and version matching), and not to start a multi-GB ESP-IDF install unasked. Rerun `npx esp32sim-mcp init` to update an installed skill.
+
 ## [0.2.0] - 2026-10-19
 
 ### Added
