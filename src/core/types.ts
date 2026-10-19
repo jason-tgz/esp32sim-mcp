@@ -31,15 +31,18 @@ export interface BoardSpec {
   hasBle: boolean;
   hasAudio: boolean;
   hasCamera: boolean;
+  hasTouch: boolean;
   buttons: string[];
   knobs: string[];
+  /** Extra esp32sim flags this board needs (e.g. larger flash/PSRAM) */
+  requiredArgs?: string[];
   description: string;
 }
 
 /**
- * Script events for interactive test scripts
+ * Script events for interactive test scripts (esp32sim `--script` actions)
  */
-export type ScriptAction = 'press' | 'knob' | 'serial' | 'stop';
+export type ScriptAction = 'press' | 'release' | 'gpio' | 'knob' | 'serial' | 'uart' | 'touch' | 'stop';
 
 export interface BaseEvent {
   time: number; // Emulated seconds from start (e.g. 1.5)
@@ -47,8 +50,19 @@ export interface BaseEvent {
 
 export interface PressEvent extends BaseEvent {
   action: 'press';
-  target: string; // e.g. "btn1", "btn2", "boot"
+  target: string; // Named button ("btn1", "boot", "sw", "right") or a GPIO number
   durationMs?: number; // Duration button is held down (e.g. 150)
+}
+
+export interface ReleaseEvent extends BaseEvent {
+  action: 'release';
+  target: string; // Named button or GPIO number
+}
+
+export interface GpioEvent extends BaseEvent {
+  action: 'gpio';
+  pin: number;
+  level: 0 | 1;
 }
 
 export interface KnobEvent extends BaseEvent {
@@ -59,14 +73,35 @@ export interface KnobEvent extends BaseEvent {
 
 export interface SerialEvent extends BaseEvent {
   action: 'serial';
-  data: string; // Serial text or JSON to inject into UART
+  data: string; // Text injected into the USB-Serial/JTAG console
+}
+
+export interface UartEvent extends BaseEvent {
+  action: 'uart';
+  port?: 0 | 1; // Default 0
+  data: string; // One line pushed into the UART's receive FIFO
+}
+
+export interface TouchEvent extends BaseEvent {
+  action: 'touch';
+  x: number;
+  y: number;
+  down?: boolean; // Default true; false releases
 }
 
 export interface StopEvent extends BaseEvent {
   action: 'stop';
 }
 
-export type SimEvent = PressEvent | KnobEvent | SerialEvent | StopEvent;
+export type SimEvent =
+  | PressEvent
+  | ReleaseEvent
+  | GpioEvent
+  | KnobEvent
+  | SerialEvent
+  | UartEvent
+  | TouchEvent
+  | StopEvent;
 
 /**
  * Options for running a simulation
@@ -83,9 +118,9 @@ export interface SimRunOptions {
   board?: string;
   maxSeconds?: number; // Emulated seconds (default 10)
   timeoutMs?: number; // Real-world timeout in ms (default 30000)
-  stopAfterExceptions?: number; // Stop after N exceptions (default 1)
+  stopAfterExceptions?: number; // Stop after N CPU exceptions (unset by default: Xtensa window exceptions are normal)
   console?: 'uart0' | 'usb' | 'both' | 'all' | 'none';
-  wifi?: string; // Virtual AP name or config
+  wifi?: string; // Virtual AP spec (`ssid=demo,psk=secret`) or a bare SSID for an open network
   net?: 'nat' | 'none';
   tftPng?: string; // Output path for display snapshot
   script?: string | SimEvent[]; // Script path or array of events
@@ -101,7 +136,7 @@ export interface SimRunOptions {
 export interface SimResult {
   success: boolean;
   exitCode: number;
-  stopReason: 'timeout' | 'exception' | 'script_stop' | 'completed' | 'error';
+  stopReason: 'timeout' | 'exception' | 'exception_limit' | 'script_stop' | 'completed' | 'error';
   uartLogs: string;
   rawStdout: string;
   rawStderr: string;

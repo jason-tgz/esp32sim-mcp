@@ -16,6 +16,69 @@ import { runExpect } from '../core/expect.js';
 import { runSimulation } from '../core/runner.js';
 import { SimEvent } from '../core/types.js';
 
+const CHIP_SCHEMA = {
+  type: 'string',
+  enum: ['esp32', 's3', 'c3', 'c6'],
+  description: 'Target chip family. Default is s3 (ESP32-S3).',
+};
+
+const BOARD_SCHEMA = {
+  type: 'string',
+  description:
+    "Board model: S3 'atech14' (default), 'waveshare-lcd4b', 'waveshare-amoled18-v2', 'waveshare-cam'; " +
+    "C6 'waveshare-c6-lcd147'; ESP32 'ttgo-tdisplay', 'esp32dev-loopback'; 'none' for a bare module. " +
+    'Omit on the C3, which has no boards. See sim_list_boards.',
+};
+
+const WIFI_SCHEMA = {
+  type: 'string',
+  description:
+    "Attach a virtual access point with DHCP/DNS/NAT. Spec like 'ssid=demo,psk=secret' " +
+    "(keys: ssid, psk, chan, bssid), or a bare SSID for an open network. Station gets 10.0.2.15.",
+};
+
+const FIRMWARE_PROPERTIES = {
+  projectDir: {
+    type: 'string',
+    description: 'Path to the ESP-IDF project root or build folder. If omitted, uses current working directory.',
+  },
+  appBin: { type: 'string', description: 'Direct path to the application binary (.bin).' },
+  bootloaderBin: { type: 'string', description: 'Direct path to bootloader.bin (needed with appBin for a real ROM boot).' },
+  ptableBin: { type: 'string', description: 'Direct path to partition-table.bin (needed with appBin for a real ROM boot).' },
+  chip: CHIP_SCHEMA,
+  board: BOARD_SCHEMA,
+};
+
+const EVENTS_SCHEMA = {
+  type: 'array',
+  description: 'Host actions at emulated times.',
+  items: {
+    type: 'object',
+    properties: {
+      time: { type: 'number', description: 'Emulated second when the event fires (e.g. 1.5).' },
+      action: { type: 'string', enum: ['press', 'release', 'gpio', 'knob', 'serial', 'uart', 'touch', 'stop'] },
+      target: {
+        type: 'string',
+        description: "press/release: button name for the board ('btn1', 'btn2', 'sw', 'boot', 'right') or a GPIO number.",
+      },
+      durationMs: { type: 'number', description: 'press: how long the button is held (e.g. 150).' },
+      pin: { type: 'number', description: 'gpio: pin number to drive.' },
+      level: { type: 'number', enum: [0, 1], description: 'gpio: level to drive.' },
+      direction: { type: 'string', enum: ['cw', 'ccw'], description: 'knob: encoder direction.' },
+      steps: { type: 'number', description: 'knob: number of detents.' },
+      data: {
+        type: 'string',
+        description: 'serial: text into the USB-Serial/JTAG console. uart: one line into the UART receive FIFO.',
+      },
+      port: { type: 'number', enum: [0, 1], description: 'uart: UART port (default 0).' },
+      x: { type: 'number', description: 'touch: x coordinate.' },
+      y: { type: 'number', description: 'touch: y coordinate.' },
+      down: { type: 'boolean', description: 'touch: true presses (default), false releases.' },
+    },
+    required: ['time', 'action'],
+  },
+};
+
 export function createMcpServer(): Server {
   const server = new Server(
     {
@@ -43,75 +106,42 @@ export function createMcpServer(): Server {
           inputSchema: {
             type: 'object',
             properties: {
-              projectDir: {
-                type: 'string',
-                description: 'Path to the ESP-IDF project root or build folder. If omitted, uses current working directory.',
-              },
-              appBin: { type: 'string', description: 'Direct path to the application binary (.bin or .elf).' },
-              bootloaderBin: { type: 'string', description: 'Direct path to bootloader.bin.' },
-              ptableBin: { type: 'string', description: 'Direct path to partition-table.bin.' },
-              chip: {
-                type: 'string',
-                enum: ['esp32', 's3', 'c3', 'c6'],
-                description: 'Target chip family. Default is s3 (ESP32-S3).',
-              },
-              board: {
-                type: 'string',
-                description: "Board model to emulate (e.g. 'atech14', 'waveshare-touch-lcd-4b', 'ttgo-t-display').",
-              },
+              ...FIRMWARE_PROPERTIES,
               maxSeconds: {
                 type: 'number',
-                description: 'Maximum emulated time in seconds (default: 10s). Fast simulation: 10s emulated takes ~0.5s real time.',
+                description: 'Maximum emulated time in seconds (default: 10s). Emulation usually runs faster than real time.',
               },
               stopAfterExceptions: {
                 type: 'number',
-                description: 'Stop emulation after N panics or Guru Meditation Errors (default: 1).',
+                description:
+                  'Stop after N CPU exceptions (unset by default). Counts every exception, including the window ' +
+                  'overflow/underflow ones Xtensa firmware takes constantly, so it is a debugging aid, not a crash detector. ' +
+                  'Panics are detected from the log regardless.',
               },
               console: {
                 type: 'string',
                 enum: ['uart0', 'usb', 'both', 'all', 'none'],
                 description: 'Console source to capture (default: uart0).',
               },
-              wifi: {
-                type: 'string',
-                description: 'Virtual WiFi network configuration or SSID.',
-              },
+              wifi: WIFI_SCHEMA,
             },
           },
         },
         {
           name: 'sim_script',
           description:
-            'Simulates hardware interactions (button presses, rotary encoder turns, serial commands) ' +
-            'at specific emulated timestamps, capturing interactive firmware behavior.',
+            'Simulates hardware interactions (button presses, GPIO levels, rotary encoder turns, touch, ' +
+            'UART/console input) at specific emulated timestamps, capturing interactive firmware behavior.',
           inputSchema: {
             type: 'object',
             properties: {
-              projectDir: { type: 'string', description: 'Path to ESP-IDF project or build folder.' },
-              appBin: { type: 'string', description: 'Application binary path.' },
-              chip: { type: 'string', enum: ['esp32', 's3', 'c3', 'c6'] },
-              board: { type: 'string', description: 'Board model with buttons/knobs (e.g. atech14).' },
-              maxSeconds: { type: 'number', description: 'Total simulation duration in seconds.' },
-              events: {
-                type: 'array',
-                description: 'Ordered list of simulation events.',
-                items: {
-                  type: 'object',
-                  properties: {
-                    time: { type: 'number', description: 'Emulated second when event fires (e.g. 1.5).' },
-                    action: { type: 'string', enum: ['press', 'knob', 'serial', 'stop'] },
-                    target: { type: 'string', description: "Button name: 'btn1', 'btn2', or 'boot'." },
-                    durationMs: { type: 'number', description: 'How long button is held (e.g. 150).' },
-                    direction: { type: 'string', enum: ['cw', 'ccw'], description: 'Encoder knob direction.' },
-                    steps: { type: 'number', description: 'Number of knob detents.' },
-                    data: { type: 'string', description: 'Serial input string sent to UART RX.' },
-                  },
-                  required: ['time', 'action'],
-                },
-              },
+              ...FIRMWARE_PROPERTIES,
+              maxSeconds: { type: 'number', description: 'Total simulation duration in seconds (default 15).' },
+              wifi: WIFI_SCHEMA,
+              events: EVENTS_SCHEMA,
               scriptContent: {
                 type: 'string',
-                description: 'Raw esp32sim script text (e.g. "1.5 press btn1 150\\n3.0 stop").',
+                description: 'Raw esp32sim script text instead of events (e.g. "1.5 press btn1 150\\n3.0 stop").',
               },
             },
           },
@@ -133,26 +163,10 @@ export function createMcpServer(): Server {
                 type: 'boolean',
                 description: 'Whether patterns must appear in exact chronological sequence (default: true).',
               },
-              projectDir: { type: 'string', description: 'Path to ESP-IDF project or build directory.' },
-              appBin: { type: 'string', description: 'Application binary.' },
-              chip: { type: 'string', enum: ['esp32', 's3', 'c3', 'c6'] },
-              board: { type: 'string', description: 'Board model.' },
-              maxSeconds: { type: 'number', description: 'Max emulated seconds to wait for patterns.' },
-              events: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    time: { type: 'number' },
-                    action: { type: 'string', enum: ['press', 'knob', 'serial', 'stop'] },
-                    target: { type: 'string' },
-                    durationMs: { type: 'number' },
-                    data: { type: 'string' },
-                  },
-                  required: ['time', 'action'],
-                },
-                description: 'Optional interaction events before checking patterns.',
-              },
+              ...FIRMWARE_PROPERTIES,
+              maxSeconds: { type: 'number', description: 'Max emulated seconds to wait for patterns (default 10).' },
+              wifi: WIFI_SCHEMA,
+              events: { ...EVENTS_SCHEMA, description: 'Optional interaction events before checking patterns.' },
             },
             required: ['patterns'],
           },
@@ -164,13 +178,13 @@ export function createMcpServer(): Server {
           inputSchema: {
             type: 'object',
             properties: {
-              projectDir: { type: 'string', description: 'Project or build directory.' },
-              appBin: { type: 'string', description: 'Application binary.' },
-              chip: { type: 'string', enum: ['esp32', 's3', 'c3', 'c6'], default: 's3' },
+              ...FIRMWARE_PROPERTIES,
               board: {
                 type: 'string',
                 default: 'atech14',
-                description: 'Board with display (e.g. atech14, waveshare-touch-lcd-4b, ttgo-t-display).',
+                description:
+                  "Board with a display: 'atech14', 'waveshare-lcd4b', 'waveshare-amoled18-v2' (S3), " +
+                  "'waveshare-c6-lcd147' (C6), 'ttgo-tdisplay' (ESP32).",
               },
               timeSeconds: {
                 type: 'number',
@@ -187,11 +201,7 @@ export function createMcpServer(): Server {
           inputSchema: {
             type: 'object',
             properties: {
-              chip: {
-                type: 'string',
-                enum: ['esp32', 's3', 'c3', 'c6'],
-                description: 'Filter boards by chip family.',
-              },
+              chip: { ...CHIP_SCHEMA, description: 'Filter boards by chip family.' },
             },
           },
         },
@@ -222,7 +232,7 @@ export function createMcpServer(): Server {
           chip: args?.chip as any,
           board: args?.board as string,
           maxSeconds: (args?.maxSeconds as number) ?? 10,
-          stopAfterExceptions: (args?.stopAfterExceptions as number) ?? 1,
+          stopAfterExceptions: args?.stopAfterExceptions as number | undefined,
           console: (args?.console as any) ?? 'uart0',
           wifi: args?.wifi as string,
         });
@@ -231,6 +241,9 @@ export function createMcpServer(): Server {
         let summary = `### Simulation Result: ${statusEmoji}\n\n`;
         summary += `- **Exit Code:** ${result.exitCode}\n`;
         summary += `- **Stop Reason:** ${result.stopReason}\n`;
+        if (result.emulatedSeconds !== undefined) {
+          summary += `- **Emulated:** ${result.emulatedSeconds}s\n`;
+        }
         summary += `- **Duration:** ${result.wallClockTimeMs} ms wall-clock\n`;
 
         if (result.hasCrashed) {
@@ -255,14 +268,20 @@ export function createMcpServer(): Server {
         const result = await runSimulation({
           projectDir: args?.projectDir as string,
           appBin: args?.appBin as string,
+          bootloaderBin: args?.bootloaderBin as string,
+          ptableBin: args?.ptableBin as string,
           chip: args?.chip as any,
           board: args?.board as string,
           maxSeconds: (args?.maxSeconds as number) ?? 15,
+          wifi: args?.wifi as string,
           script: scriptContent || events,
         });
 
         let text = `### Scripted Simulation Result: ${result.success ? '✅ COMPLETED' : '❌ FAILED'}\n\n`;
         text += `- **Stop Reason:** ${result.stopReason}\n`;
+        if (result.hasCrashed) {
+          text += `- **Crash:** \`${result.panicMessage}\`\n`;
+        }
         text += `- **Wall-clock:** ${result.wallClockTimeMs} ms\n\n`;
         text += `#### UART Output:\n\`\`\`text\n${result.uartLogs.trim() || '(No output)'}\n\`\`\``;
 
@@ -281,9 +300,12 @@ export function createMcpServer(): Server {
           ordered: (args?.ordered as boolean) ?? true,
           projectDir: args?.projectDir as string,
           appBin: args?.appBin as string,
+          bootloaderBin: args?.bootloaderBin as string,
+          ptableBin: args?.ptableBin as string,
           chip: args?.chip as any,
           board: args?.board as string,
           maxSeconds: (args?.maxSeconds as number) ?? 10,
+          wifi: args?.wifi as string,
           script: events,
         });
 
@@ -318,6 +340,8 @@ export function createMcpServer(): Server {
         const result = await runSimulation({
           projectDir: args?.projectDir as string,
           appBin: args?.appBin as string,
+          bootloaderBin: args?.bootloaderBin as string,
+          ptableBin: args?.ptableBin as string,
           chip: (args?.chip as any) ?? 's3',
           board,
           maxSeconds: timeSec,

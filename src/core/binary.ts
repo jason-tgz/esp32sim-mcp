@@ -57,10 +57,18 @@ export function resolveRomPath(chip: string, customRom?: string): string | undef
   }
 
   const norm = chip.toLowerCase().replace(/[^a-z0-9]/g, '');
+  // Same lookup order as esp32sim itself, plus our own ~/.esp32sim/roms
+  const espressifRoms = path.join(os.homedir(), '.espressif', 'tools', 'esp-rom-elfs');
+  let espressifVersions: string[] = [];
+  try {
+    espressifVersions = fs.readdirSync(espressifRoms).sort().reverse().map((v) => path.join(espressifRoms, v));
+  } catch {
+    // ESP-IDF tools not installed
+  }
   const candidateDirs = [
     process.env.ESP32SIM_ROM_DIR,
     path.join(os.homedir(), '.esp32sim', 'roms'),
-    '/tmp/esp32sim/web/wasm/fw',
+    ...espressifVersions,
     path.resolve('roms'),
   ].filter(Boolean) as string[];
 
@@ -129,13 +137,20 @@ export function runDoctor(customPath?: string): DoctorResult {
     const check = checkBinary(binaryPath);
     if (check.valid) {
       esp32simFound = true;
-      version = '0.1.0 (mikroverk/esp32sim)';
     } else {
       recommendations.push(`Found esp32sim at ${binaryPath} but failed to run: ${check.error}`);
     }
   } else {
     recommendations.push(
       'esp32sim emulator is not installed. Run `cargo install --git https://github.com/mikroverk/esp32sim esp32sim` or download precompiled binary to ~/.esp32sim/bin/'
+    );
+  }
+
+  const missingRoms = ['esp32', 's3', 'c3', 'c6'].filter((c) => !resolveRomPath(c));
+  if (missingRoms.length > 0) {
+    recommendations.push(
+      `Mask ROM ELF not found for: ${missingRoms.join(', ')}. Install ESP-IDF (which ships esp-rom-elfs) ` +
+      'or put the *_rom.elf files in ~/.esp32sim/roms or $ESP32SIM_ROM_DIR. Without them only --boot app runs work.'
     );
   }
 
@@ -147,7 +162,7 @@ export function runDoctor(customPath?: string): DoctorResult {
     rustInstalled = true;
     rustVersion = cargoOut;
   } catch {
-    recommendations.push('Rust/Cargo is not installed in PATH. Installing Rust lets you build esp32sim locally with `cargo install esp32sim`.');
+    if (!esp32simFound) recommendations.push('Rust/Cargo is not installed in PATH. Installing Rust lets you build esp32sim locally with `cargo install esp32sim`.');
   }
 
   // Check ESP-IDF environment (optional, for compiling from source)

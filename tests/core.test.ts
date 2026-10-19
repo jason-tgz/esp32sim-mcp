@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { normalizeChip } from '../src/core/types.js';
 import { getBoardsByChip, getBoardById, SUPPORTED_BOARDS } from '../src/core/boards.js';
 import { serializeScriptEvents } from '../src/core/script.js';
+import { normalizeWifiSpec } from '../src/core/runner.js';
 import { checkExpectations } from '../src/core/expect.js';
 import { runDoctor } from '../src/core/binary.js';
 
@@ -25,7 +26,9 @@ describe('Chip & Board Registry', () => {
     expect(atech?.buttons).toContain('btn1');
 
     const c6Boards = getBoardsByChip('c6');
-    expect(c6Boards.some((b) => b.id === 'waveshare-c6-lcd-1.47')).toBe(true);
+    expect(c6Boards.some((b) => b.id === 'waveshare-c6-lcd147')).toBe(true);
+    // The C3 has no board models and refuses --board, even 'none'
+    expect(getBoardsByChip('c3')).toEqual([]);
   });
 });
 
@@ -48,6 +51,33 @@ describe('Simulation Script Generator', () => {
     expect(lines[2]).toBe('3.4 press btn2 120');
     expect(lines[3]).toBe('4 serial {"status":"ok"}');
     expect(lines[4]).toBe('5 stop');
+  });
+
+  it('serializes release, gpio, uart and touch actions', () => {
+    const script = serializeScriptEvents([
+      { time: 1, action: 'release', target: '16' },
+      { time: 2, action: 'gpio', pin: 17, level: 0 },
+      { time: 3, action: 'uart', data: 'root' },
+      { time: 4, action: 'uart', port: 1, data: 'AT' },
+      { time: 5, action: 'touch', x: 450, y: 30 },
+      { time: 6, action: 'touch', x: 450, y: 30, down: false },
+    ]);
+
+    expect(script.split('\n')).toEqual([
+      '1 release 16',
+      '2 gpio 17 0',
+      '3 uart0 root',
+      '4 uart1 AT',
+      '5 touch 450 30 1',
+      '6 touch 450 30 0',
+    ]);
+  });
+});
+
+describe('WiFi spec', () => {
+  it('turns a bare SSID into an open-network spec and keeps full specs', () => {
+    expect(normalizeWifiSpec('demo')).toBe('ssid=demo');
+    expect(normalizeWifiSpec('ssid=demo,psk=secret')).toBe('ssid=demo,psk=secret');
   });
 });
 

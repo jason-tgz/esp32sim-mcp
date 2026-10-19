@@ -19,6 +19,14 @@ export function serializeScriptEvents(events: SimEvent[]): string {
         lines.push(`${t} press ${ev.target}${duration}`);
         break;
       }
+      case 'release': {
+        lines.push(`${t} release ${ev.target}`);
+        break;
+      }
+      case 'gpio': {
+        lines.push(`${t} gpio ${ev.pin} ${ev.level}`);
+        break;
+      }
       case 'knob': {
         const dir = ev.direction || 'cw';
         const steps = ev.steps || 1;
@@ -26,8 +34,15 @@ export function serializeScriptEvents(events: SimEvent[]): string {
         break;
       }
       case 'serial': {
-        // Serial data
         lines.push(`${t} serial ${ev.data}`);
+        break;
+      }
+      case 'uart': {
+        lines.push(`${t} uart${ev.port ?? 0} ${ev.data}`);
+        break;
+      }
+      case 'touch': {
+        lines.push(`${t} touch ${ev.x} ${ev.y} ${ev.down === false ? 0 : 1}`);
         break;
       }
       case 'stop': {

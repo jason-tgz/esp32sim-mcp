@@ -44,6 +44,8 @@ If you don't have the `esp32sim` emulator binary installed yet, compile it direc
 cargo install --git https://github.com/mikroverk/esp32sim esp32sim
 ```
 
+A real ROM boot also needs Espressif's mask ROM ELFs (`esp32s3_rev0_rom.elf` and friends). They ship with ESP-IDF in `~/.espressif/tools/esp-rom-elfs/`, which is found automatically; otherwise put them in `~/.esp32sim/roms` or point `ESP32SIM_ROM_DIR` at them.
+
 ---
 
 ## 🛠️ MCP Tools for Agents
@@ -53,9 +55,9 @@ When connected, coding agents gain access to the following specialized tools:
 | Tool | Input | Output | Description |
 | --- | --- | --- | --- |
 | `sim_run` | `projectDir`, `appBin`, `chip`, `board`, `maxSeconds` | UART console log, stop reason, exit code, panic details | Boots real mask ROM & bootloader, runs app, captures UART output and crash logs. |
-| `sim_script` | `events` (array of `press`, `knob`, `serial`, `stop`) | Timed UART logs | Injects hardware events (button presses, rotary encoder, UART RX data) at emulated timestamps. |
+| `sim_script` | `events` (array of `press`, `release`, `gpio`, `knob`, `uart`, `serial`, `touch`, `stop`) | Timed UART logs | Injects hardware events (button presses, rotary encoder, UART RX data) at emulated timestamps. |
 | `sim_expect` | `patterns` (strings or regexes), `ordered` | Pass/Fail status, matched lines, diff of missing line | Asserts expected UART output for autonomous Red-Green-Refactor testing loops. |
-| `sim_screenshot` | `board` (e.g. `atech14`), `timeSeconds` | PNG image & base64 data | Captures virtual ST7789/ST7701S LCD/TFT display buffer at specific emulated moment. |
+| `sim_screenshot` | `board` (e.g. `atech14`), `timeSeconds` | PNG image & base64 data | Captures the virtual ST7735/ST7789/ST7701S/CO5300 display buffer at specific emulated moment. |
 | `sim_list_boards` | `chip` (optional: `s3`, `c3`, `c6`, `esp32`) | Board specs & peripherals | Catalogs supported chips, CPU cores, displays, and peripheral buttons. |
 | `sim_doctor` | none | Environment health report | Checks `esp32sim` binary, Rust toolchain, and host architecture. |
 

@@ -44,9 +44,10 @@ Boots the firmware in `esp32sim` and returns UART console logs, duration, stop r
 - **Parameters:**
   - `projectDir`: Root directory of the ESP-IDF project (defaults to workspace). Automatically locates `build/flasher_args.json` and `.bin` files!
   - `chip`: `'s3'` (default), `'c3'`, `'c6'`, or `'esp32'`.
-  - `board`: Board model (e.g. `'atech14'`, `'waveshare-touch-lcd-4b'`, `'ttgo-t-display'`).
-  - `maxSeconds`: Emulated seconds limit (default `10`). Note: emulation runs ~30x faster than real-time.
-  - `stopAfterExceptions`: Number of panics before emulator halts (default `1`).
+  - `board`: Board model: `'atech14'` (S3 default), `'waveshare-lcd4b'`, `'waveshare-amoled18-v2'`, `'waveshare-cam'`, `'waveshare-c6-lcd147'` (C6), `'ttgo-tdisplay'` (ESP32), or `'none'` for a bare module (stock ESP-IDF examples). Omit it on the C3. Use `sim_list_boards` for details.
+  - `maxSeconds`: Emulated seconds limit (default `10`). Emulation usually runs faster than real time.
+  - `wifi`: Attach a virtual access point with DHCP/DNS/NAT, e.g. `'ssid=demo,psk=secret'` (a bare SSID means an open network). The station gets `10.0.2.15`. Also accepted by `sim_expect` and `sim_script`.
+  - `stopAfterExceptions`: Leave unset. It counts *every* CPU exception, including the window overflows Xtensa code takes constantly, so `1` stops before the bootloader. Panics are detected from the log anyway.
 
 ### 2. `sim_expect` (Recommended for Tests)
 Runs firmware and asserts that specified strings or regexes appear on the UART output.
@@ -60,13 +61,17 @@ Simulates hardware interactions at specific timestamps:
 - **Events:**
   - `press`: Hold button down (e.g. `{ time: 1.5, action: "press", target: "btn1", durationMs: 150 }`).
   - `knob`: Rotate encoder (e.g. `{ time: 2.0, action: "knob", direction: "cw", steps: 2 }`).
-  - `serial`: Send serial RX input (e.g. `{ time: 3.0, action: "serial", data: "PING\\n" }`).
+  - `release`: Release a button or GPIO (e.g. `{ time: 2.0, action: "release", target: "16" }`).
+  - `gpio`: Drive a pin level (e.g. `{ time: 2.5, action: "gpio", pin: 17, level: 0 }`).
+  - `uart`: Push one line into UART0's receive FIFO, or UART1 with `port: 1` (e.g. `{ time: 3.0, action: "uart", data: "PING" }`). Use this for firmware reading UART0 with `uart_read_bytes`.
+  - `serial`: Send text into the USB-Serial/JTAG console instead (e.g. `{ time: 3.0, action: "serial", data: "PING" }`).
+  - `touch`: Touch panel press at (x, y); `down: false` releases (e.g. `{ time: 4.5, action: "touch", x: 450, y: 30 }`).
   - `stop`: Terminate simulation early (e.g. `{ time: 5.0, action: "stop" }`).
 
 ### 4. `sim_screenshot`
-Captures virtual display buffer for boards with LCD/TFT (e.g. ST7789, ST7701S).
+Captures virtual display buffer for boards with LCD/TFT/AMOLED (ST7735, ST7789, ST7701S, CO5300).
 - **Parameters:**
-  - `board`: `'atech14'` (480x480), `'waveshare-touch-lcd-4b'`, `'ttgo-t-display'`.
+  - `board`: `'atech14'` (160x80 ST7735), `'waveshare-lcd4b'` (480x480), `'waveshare-amoled18-v2'` (368x448), `'waveshare-c6-lcd147'` (172x320), `'ttgo-tdisplay'` (135x240).
   - `timeSeconds`: Emulated second to take snapshot.
   - Returns embedded PNG data and file path.
 

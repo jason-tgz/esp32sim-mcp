@@ -4,11 +4,12 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { runSimulation } from '../src/core/runner.js';
 import { runExpect } from '../src/core/expect.js';
+import { spawnSync } from 'child_process';
+import { resolveEsp32SimBinary, resolveRomPath } from '../src/core/binary.js';
+import { SUPPORTED_BOARDS } from '../src/core/boards.js';
+import { FIXTURES_DIR, HAS_EMULATOR, HELLO_S3 } from './helpers.js';
 
-const FIXTURES_DIR = path.resolve(__dirname, 'fixtures/demo-firmware');
-const HAS_FIXTURES = fs.existsSync(path.join(FIXTURES_DIR, 'hello_world.bin'));
-
-describe.skipIf(!HAS_FIXTURES)('End-to-End Real esp32sim Simulation', () => {
+describe.skipIf(!HAS_EMULATOR)('End-to-End Real esp32sim Simulation', () => {
   it('boots real ESP32-S3 firmware and captures UART output', async () => {
     const res = await runSimulation({
       chip: 's3',
@@ -63,5 +64,37 @@ describe.skipIf(!HAS_FIXTURES)('End-to-End Real esp32sim Simulation', () => {
 
     // Clean up
     fs.unlinkSync(tmpPng);
+  });
+
+  it('reports a script stop as script_stop with the emulated time', async () => {
+    const res = await runSimulation({
+      ...HELLO_S3,
+      maxSeconds: 2,
+      script: [{ time: 0.3, action: 'stop' }],
+    });
+
+    expect(res.stopReason).toBe('script_stop');
+    expect(res.emulatedSeconds).toBeCloseTo(0.3, 2);
+  });
+
+  it('reports a hit exception limit as exception_limit, not a clean run', async () => {
+    const res = await runSimulation({ ...HELLO_S3, maxSeconds: 1, stopAfterExceptions: 1 });
+
+    expect(res.stopReason).toBe('exception_limit');
+    expect(res.uartLogs).not.toContain('Hello world!');
+  });
+
+  it('every catalogued board id is accepted by esp32sim', () => {
+    const bin = resolveEsp32SimBinary()!;
+    for (const board of SUPPORTED_BOARDS) {
+      const chip = board.id === 'none' ? 's3' : board.chip;
+      const rom = resolveRomPath(chip);
+      const args = ['--chip', chip, '--board', board.id, '--max-seconds', '0.001', '--no-dump'];
+      if (rom) args.push('--rom', rom);
+      args.push('--boot', 'rom', '--bootloader', HELLO_S3.bootloaderBin, '--ptable', HELLO_S3.ptableBin, '--app', HELLO_S3.appBin);
+      args.push(...(board.requiredArgs ?? []));
+      const out = spawnSync(bin, args, { encoding: 'utf-8', timeout: 20000 });
+      expect(out.stderr + out.stdout, board.id).not.toMatch(/unknown board/i);
+    }
   });
 });

@@ -38,17 +38,17 @@ program
   .option('-a, --app <path>', 'Path to application .bin')
   .option('-b, --bootloader <path>', 'Path to bootloader .bin')
   .option('-t, --ptable <path>', 'Path to partition-table .bin')
-  .option('-c, --chip <chip>', 'Chip architecture: esp32, s3, c3, c6', 's3')
+  .option('-c, --chip <chip>', 'Chip: esp32, s3, c3, c6 (default: from build, else s3)')
   .option('--board <board>', 'Board model to emulate (e.g. atech14)')
   .option('-s, --max-seconds <n>', 'Maximum emulated seconds', parseFloat, 10)
   .option('--stop-after-exceptions <n>', 'Stop after N exceptions', parseInt)
   .option('--console <source>', 'Console source (uart0, usb, both, all, none)', 'uart0')
-  .option('--wifi <ssid>', 'Virtual WiFi network')
+  .option('--wifi <spec>', "Virtual access point: 'ssid=demo,psk=secret' or a bare SSID (open network)")
   .option('--tft-png <path>', 'Save LCD screenshot to PNG')
   .option('--script <path>', 'Path to interaction script')
   .action(async (opts) => {
     try {
-      console.log(chalk.cyan(`🚀 Starting ESP32 simulation (${opts.chip})...`));
+      console.log(chalk.cyan(`🚀 Starting ESP32 simulation${opts.chip ? ` (${opts.chip})` : ''}...`));
       const res = await runSimulation({
         projectDir: opts.projectDir,
         appBin: opts.app,
@@ -94,9 +94,10 @@ program
   .option('-a, --app <path>', 'Path to application .bin')
   .option('-b, --bootloader <path>', 'Path to bootloader .bin')
   .option('-t, --ptable <path>', 'Path to partition-table .bin')
-  .option('-c, --chip <chip>', 'Target chip: esp32, s3, c3, c6', 's3')
+  .option('-c, --chip <chip>', 'Chip: esp32, s3, c3, c6 (default: from build, else s3)')
   .option('--board <board>', 'Board model')
   .option('-s, --max-seconds <n>', 'Maximum emulated seconds', parseFloat, 10)
+  .option('--wifi <spec>', "Virtual access point: 'ssid=demo,psk=secret' or a bare SSID (open network)")
   .option('--unordered', 'Allow patterns to appear in any order')
   .option('--script <path>', 'Path to interaction script')
   .action(async (opts) => {
@@ -116,6 +117,7 @@ program
         chip: opts.chip,
         board: opts.board,
         maxSeconds: opts.maxSeconds,
+        wifi: opts.wifi,
         script: opts.script,
       });
 

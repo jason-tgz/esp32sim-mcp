@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import stripAnsi from 'strip-ansi';
 import { resolveEsp32SimBinary, resolveRomPath } from './binary.js';
+import { getBoardById } from './boards.js';
 import { resolveFirmware } from './firmware.js';
 import { writeTempScript } from './script.js';
 import { SimResult, SimRunOptions } from './types.js';
@@ -23,6 +24,18 @@ const EXCEPTION_PATTERNS = [
   /DoubleException/i,
   /Unhandled exception: (.+)/i,
 ];
+
+// Lines esp32sim prints on stderr when the run ends
+const SCRIPT_STOP_PATTERN = /^\[script\] t=[\d.]+s stop\b/im;
+const EXCEPTION_LIMIT_PATTERN = /^\[emu\] stop: Exceptions\(\d+\)/m;
+const EMULATED_TIME_PATTERN = /^\[emu\] stop: .*?emulated ([\d.]+)s/m;
+
+/**
+ * esp32sim's `--wifi` takes `key=value` pairs; a bare word is treated as an open network's SSID
+ */
+export function normalizeWifiSpec(wifi: string): string {
+  return wifi.includes('=') ? wifi : `ssid=${wifi}`;
+}
 
 /**
  * Runs esp32sim with the configured options and returns a structured result
@@ -78,6 +91,10 @@ export async function runSimulation(options: SimRunOptions): Promise<SimResult> 
   // Board selection
   if (options.board) {
     args.push('--board', options.board);
+    const spec = getBoardById(options.board);
+    if (spec?.requiredArgs && !spec.requiredArgs.some((a) => options.customArgs?.includes(a))) {
+      args.push(...spec.requiredArgs);
+    }
   }
 
   // Emulation limits
@@ -97,7 +114,7 @@ export async function runSimulation(options: SimRunOptions): Promise<SimResult> 
 
   // Networking / WiFi
   if (options.wifi) {
-    args.push('--wifi', options.wifi);
+    args.push('--wifi', normalizeWifiSpec(options.wifi));
   }
   if (options.net) {
     args.push('--net', options.net);
@@ -202,17 +219,22 @@ export async function runSimulation(options: SimRunOptions): Promise<SimResult> 
       }
 
       const hasCrashed = foundExceptions.length > 0 || code === 2;
-      let stopReason: 'timeout' | 'exception' | 'script_stop' | 'completed' | 'error' = 'completed';
+      let stopReason: SimResult['stopReason'] = 'completed';
 
       if (timedOut) {
         stopReason = 'timeout';
       } else if (foundExceptions.length > 0) {
         stopReason = 'exception';
-      } else if (combinedLogs.includes('stop command') || combinedLogs.includes('script requested stop')) {
+      } else if (SCRIPT_STOP_PATTERN.test(cleanStderr)) {
         stopReason = 'script_stop';
+      } else if (EXCEPTION_LIMIT_PATTERN.test(cleanStderr)) {
+        stopReason = 'exception_limit';
       } else if (code !== 0 && code !== null) {
         stopReason = 'error';
       }
+
+      const emulatedMatch = cleanStderr.match(EMULATED_TIME_PATTERN);
+      const emulatedSeconds = emulatedMatch ? parseFloat(emulatedMatch[1]) : undefined;
 
       // Handle display screenshot if requested
       let screenshotBase64: string | undefined;
@@ -233,6 +255,7 @@ export async function runSimulation(options: SimRunOptions): Promise<SimResult> 
         uartLogs: cleanStdout,
         rawStdout: stdoutData,
         rawStderr: stderrData,
+        emulatedSeconds,
         wallClockTimeMs: wallClock,
         exceptions: foundExceptions,
         hasCrashed,
