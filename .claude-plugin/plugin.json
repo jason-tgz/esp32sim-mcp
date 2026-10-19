@@ -1,7 +1,7 @@
 {
   "name": "esp32sim",
   "displayName": "ESP32 Simulator",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Boot and test the ESP32 firmware your agent builds in a local emulator: real mask ROM and bootloader, UART assertions, buttons, virtual WiFi, display screenshots. No board, no account.",
   "author": {
     "name": "Emanuele Strazzullo",
@@ -24,7 +24,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "esp32sim-mcp@0.2.5",
+        "esp32sim-mcp@0.2.6",
         "serve"
       ]
     }
