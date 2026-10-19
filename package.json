@@ -1,0 +1,58 @@
+{
+  "name": "esp32sim-mcp",
+  "version": "0.1.0",
+  "description": "Run, test and debug ESP32 firmware in a local emulator via MCP, CLI and agent skill",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "esp32sim-mcp": "./dist/cli/index.js"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "keywords": [
+    "esp32",
+    "esp32-s3",
+    "esp32-c3",
+    "esp32-c6",
+    "emulator",
+    "mcp",
+    "model-context-protocol",
+    "embedded",
+    "iot",
+    "testing",
+    "claude",
+    "cursor"
+  ],
+  "author": "Emanuele Strazzullo",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "chalk": "^5.4.1",
+    "commander": "^13.1.0",
+    "glob": "^11.0.1",
+    "ora": "^8.2.0",
+    "strip-ansi": "^7.1.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.9",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.7"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
