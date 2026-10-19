@@ -41,7 +41,7 @@ program
   .option('-c, --chip <chip>', 'Chip architecture: esp32, s3, c3, c6', 's3')
   .option('--board <board>', 'Board model to emulate (e.g. atech14)')
   .option('-s, --max-seconds <n>', 'Maximum emulated seconds', parseFloat, 10)
-  .option('--stop-after-exceptions <n>', 'Stop after N exceptions', parseInt, 1)
+  .option('--stop-after-exceptions <n>', 'Stop after N exceptions', parseInt)
   .option('--console <source>', 'Console source (uart0, usb, both, all, none)', 'uart0')
   .option('--wifi <ssid>', 'Virtual WiFi network')
   .option('--tft-png <path>', 'Save LCD screenshot to PNG')
@@ -92,6 +92,8 @@ program
   .requiredOption('--pattern <pattern...>', 'Expected strings or regexes on UART')
   .option('-p, --project-dir <path>', 'Path to ESP-IDF project or build folder')
   .option('-a, --app <path>', 'Path to application .bin')
+  .option('-b, --bootloader <path>', 'Path to bootloader .bin')
+  .option('-t, --ptable <path>', 'Path to partition-table .bin')
   .option('-c, --chip <chip>', 'Target chip: esp32, s3, c3, c6', 's3')
   .option('--board <board>', 'Board model')
   .option('-s, --max-seconds <n>', 'Maximum emulated seconds', parseFloat, 10)
@@ -109,6 +111,8 @@ program
         ordered,
         projectDir: opts.projectDir,
         appBin: opts.app,
+        bootloaderBin: opts.bootloader,
+        ptableBin: opts.ptable,
         chip: opts.chip,
         board: opts.board,
         maxSeconds: opts.maxSeconds,

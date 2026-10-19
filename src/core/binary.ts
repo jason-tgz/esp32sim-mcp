@@ -49,6 +49,44 @@ export function resolveEsp32SimBinary(customPath?: string): string | null {
 }
 
 /**
+ * Searches for mask ROM ELF files for a given chip
+ */
+export function resolveRomPath(chip: string, customRom?: string): string | undefined {
+  if (customRom && fs.existsSync(customRom)) {
+    return path.resolve(customRom);
+  }
+
+  const norm = chip.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const candidateDirs = [
+    process.env.ESP32SIM_ROM_DIR,
+    path.join(os.homedir(), '.esp32sim', 'roms'),
+    '/tmp/esp32sim/web/wasm/fw',
+    path.resolve('roms'),
+  ].filter(Boolean) as string[];
+
+  const chipPrefix = norm === 's3' || norm === 'esp32s3' ? 'esp32s3'
+    : norm === 'c3' || norm === 'esp32c3' ? 'esp32c3'
+    : norm === 'c6' || norm === 'esp32c6' ? 'esp32c6'
+    : 'esp32';
+
+  for (const dir of candidateDirs) {
+    if (!fs.existsSync(dir)) continue;
+    try {
+      const files = fs.readdirSync(dir);
+      // Find matching rom, e.g. esp32s3_rev0_rom.elf
+      const matched = files.find((f) => f.startsWith(chipPrefix) && f.endsWith('_rom.elf'));
+      if (matched) {
+        return path.join(dir, matched);
+      }
+    } catch {
+      // ignore read error
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Executes esp32sim --help to verify it works and get version info
  */
 export function checkBinary(binaryPath?: string): { valid: boolean; output?: string; error?: string } {

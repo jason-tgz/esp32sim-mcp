@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import stripAnsi from 'strip-ansi';
-import { resolveEsp32SimBinary } from './binary.js';
+import { resolveEsp32SimBinary, resolveRomPath } from './binary.js';
 import { resolveFirmware } from './firmware.js';
 import { writeTempScript } from './script.js';
 import { SimResult, SimRunOptions } from './types.js';
@@ -58,6 +58,10 @@ export async function runSimulation(options: SimRunOptions): Promise<SimResult> 
   } else {
     if (firmware.bootloaderBin && firmware.ptableBin && firmware.appBin) {
       args.push('--boot', 'rom');
+      const romPath = resolveRomPath(chip, options.romBin);
+      if (romPath) {
+        args.push('--rom', romPath);
+      }
       args.push('--bootloader', firmware.bootloaderBin);
       args.push('--ptable', firmware.ptableBin);
       args.push('--app', firmware.appBin);
@@ -80,8 +84,9 @@ export async function runSimulation(options: SimRunOptions): Promise<SimResult> 
   const maxSeconds = options.maxSeconds ?? 10;
   args.push('--max-seconds', maxSeconds.toString());
 
-  const stopExc = options.stopAfterExceptions ?? 1;
-  args.push('--stop-after-exceptions', stopExc.toString());
+  if (options.stopAfterExceptions !== undefined) {
+    args.push('--stop-after-exceptions', options.stopAfterExceptions.toString());
+  }
 
   // Console output
   if (options.console) {
