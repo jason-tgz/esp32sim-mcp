@@ -71,7 +71,7 @@ Boots the firmware in `esp32sim` and returns UART console logs, duration, stop r
 ### 2. `sim_expect` (Recommended for Tests)
 Runs firmware and asserts that specified strings or regexes appear on the UART output.
 - **Parameters:**
-  - `patterns`: Array of expected strings (e.g. `["bootloader", "WiFi connected", "Server listening on :80"]`).
+  - `patterns`: Array of expected console output. Plain text matches as a substring of a line (`"Counter: 5"`); a regular expression goes between slashes (`"/Counter: \\d+/"`, `"/got ip/i"`). Required: an empty list is an error.
   - `ordered`: If `true` (default), patterns must appear in chronological order.
   - Returns: Pass/Fail status, line numbers, matched text, and diagnostics for missing lines.
 

@@ -2,6 +2,21 @@ import { runSimulation } from './runner.js';
 import { ExpectOptions, ExpectResult, PatternCheckResult, SimResult } from './types.js';
 
 /**
+ * A pattern written as `/body/flags` is a regular expression; anything else is literal text.
+ * Agents and the CLI can only send strings, so this is how they ask for a regex.
+ */
+export function parsePattern(pattern: string | RegExp): string | RegExp {
+  if (pattern instanceof RegExp) return pattern;
+  const m = pattern.match(/^\/(.+)\/([dimsu]*)$/);
+  if (!m) return pattern;
+  try {
+    return new RegExp(m[1], m[2]);
+  } catch (err: any) {
+    throw new Error(`Invalid regex pattern ${pattern}: ${err?.message ?? err}`);
+  }
+}
+
+/**
  * Checks a list of patterns against UART logs
  */
 export function checkExpectations(
@@ -24,8 +39,9 @@ export function checkExpectations(
   let allMatched = true;
   let missingPattern: string | undefined;
 
-  for (const pat of patterns) {
-    const patString = pat instanceof RegExp ? pat.source : pat;
+  for (const raw of patterns) {
+    const pat = parsePattern(raw);
+    const patString = raw instanceof RegExp ? `/${raw.source}/${raw.flags}` : raw;
     let found = false;
     let foundLineIndex = -1;
     let foundLineText = '';
@@ -106,6 +122,8 @@ export async function runExpect(options: ExpectOptions): Promise<ExpectResult> {
   if (!Array.isArray(options.patterns) || options.patterns.length === 0) {
     throw new Error('`patterns` is required: pass at least one string or regex expected on the console.');
   }
+  // Reject a malformed regex before spending a simulation run on it
+  options.patterns.forEach(parsePattern);
   const simResult: SimResult = await runSimulation(options);
 
   const check = checkExpectations(simResult.uartLogs, options.patterns, {

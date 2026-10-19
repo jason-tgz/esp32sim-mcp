@@ -92,7 +92,7 @@ program
 program
   .command('expect')
   .description('Run firmware and assert expected patterns on UART output (exits 0 on pass, 1 on fail)')
-  .requiredOption('--pattern <pattern...>', 'Expected strings or regexes on UART')
+  .requiredOption('--pattern <pattern...>', 'Expected console text; /regex/flags for a regular expression')
   .option('-p, --project-dir <path>', 'Path to ESP-IDF project or build folder')
   .option('-a, --app <path>', 'Path to application .bin')
   .option('-b, --bootloader <path>', 'Path to bootloader .bin')

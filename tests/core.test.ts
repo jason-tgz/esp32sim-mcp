@@ -3,7 +3,7 @@ import { normalizeChip } from '../src/core/types.js';
 import { getBoardsByChip, getBoardById, SUPPORTED_BOARDS } from '../src/core/boards.js';
 import { serializeScriptEvents } from '../src/core/script.js';
 import { normalizeWifiSpec } from '../src/core/runner.js';
-import { checkExpectations } from '../src/core/expect.js';
+import { checkExpectations, parsePattern } from '../src/core/expect.js';
 import { ESP32SIM_TESTED_REV, runDoctor } from '../src/core/binary.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -146,5 +146,19 @@ describe('Pinned emulator version', () => {
       const text = fs.readFileSync(path.resolve(__dirname, '../.github/workflows', workflow), 'utf-8');
       expect(text, workflow).toContain(`ESP32SIM_REF: ${ESP32SIM_TESTED_REV}`);
     }
+  });
+});
+
+describe('Pattern syntax', () => {
+  const logs = 'I (100) app: Counter: 12\nI (200) wifi: WiFi CONNECTED to demo\n';
+
+  it('treats /body/flags as a regex and everything else as literal text', () => {
+    expect(checkExpectations(logs, ['/Counter: \\d+$/', '/wifi connected/i']).passed).toBe(true);
+    expect(checkExpectations(logs, ['Counter: \\d+']).passed).toBe(false);
+    expect(checkExpectations(logs, ['Counter: 12']).passed).toBe(true);
+  });
+
+  it('rejects an invalid regex with a clear message', () => {
+    expect(() => parsePattern('/Counter: (/')).toThrow(/Invalid regex pattern/);
   });
 });

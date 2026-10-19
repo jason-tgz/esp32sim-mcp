@@ -4,6 +4,11 @@ All notable changes are documented here. The project follows [Semantic Versionin
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-10-19
+
+### Fixed
+- Regex patterns now work for agents and the CLI: write them as `/body/flags`. Before, every string was matched literally, so a pattern like `Counter: 1\b` could never match although the tool advertised regex support. Plain text still matches as a substring.
+
 ## [0.2.3] - 2026-10-19
 
 ### Fixed

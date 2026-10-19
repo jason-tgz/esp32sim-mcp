@@ -159,7 +159,9 @@ export function createMcpServer(): Server {
               patterns: {
                 type: 'array',
                 items: { type: 'string' },
-                description: 'List of expected strings or regex patterns on UART output.',
+                description:
+                  'Expected console output. Plain text matches as a substring of a line ("Counter: 5"); ' +
+                  'write a regular expression between slashes ("/Counter: \\\\d+/", "/wifi.*connected/i").',
               },
               ordered: {
                 type: 'boolean',
