@@ -1,37 +1,162 @@
+<div align="center">
+
 # esp32sim-mcp
 
-> **"Your agent writes ESP32 firmware, boots it and tests it. No board, no account."**
+**Your agent writes ESP32 firmware, boots it and tests it. No board, no account.**
 
-[![CI](https://github.com/stramanu/esp32sim-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/stramanu/esp32sim-mcp/actions)
-[![npm version](https://img.shields.io/npm/v/esp32sim-mcp.svg)](https://www.npmjs.com/package/esp32sim-mcp)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm](https://img.shields.io/npm/v/esp32sim-mcp?color=cb3837&logo=npm)](https://www.npmjs.com/package/esp32sim-mcp)
+[![CI](https://github.com/stramanu/esp32sim-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/stramanu/esp32sim-mcp/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![MCP](https://img.shields.io/badge/MCP-server-8A2BE2)](https://modelcontextprotocol.io)
 
-**esp32sim-mcp** lets an AI coding agent (Claude Code, Codex, Cursor, or any MCP client) boot, drive and test the ESP32 firmware it builds with ESP-IDF, inside the local [esp32sim](https://github.com/mikroverk/esp32sim) emulator: real mask ROM, real bootloader, unmodified binaries.
+<img src="https://raw.githubusercontent.com/stramanu/esp32sim-mcp/main/docs/demo.gif" alt="Claude Code adds a counter to an ESP-IDF project, builds it and verifies it in the emulator" width="900">
 
-No physical development board. No cloud account or token.
+<sub>Real, unedited session: Claude Code edits <code>hello_world</code>, builds it with ESP-IDF in Docker and checks the UART output in the emulator.</sub>
 
-**Requirements:** Node.js 22+, and ESP-IDF or Docker to build firmware. `npx esp32sim-mcp setup` installs the emulator (prebuilt for macOS arm64, Linux x64 and Linux arm64) and the mask ROMs. Tested on macOS and Linux.
+</div>
 
 ---
 
-## ⚡ 1-Minute Quickstart
+Coding agents are good at writing embedded C. They are blind when it comes to running it: without a board on the desk, "it compiles" is where the feedback loop ends.
 
-### 1. Install the emulator
+**esp32sim-mcp** closes that loop. It gives Claude Code, Codex, Cursor or any MCP client a set of tools that boot the firmware the agent just built inside [esp32sim](https://github.com/mikroverk/esp32sim), a local instruction-level ESP32 emulator, and hand back what the chip printed, whether it crashed, and what was on the display. The agent reads the result, fixes the code and tries again, the way you would with a board on the bench.
+
+- 🔌 **No hardware, no cloud.** Everything runs on your machine. No account, no token, no board.
+- 🧬 **Real boot chain.** Espressif's mask ROM, the ESP-IDF bootloader and your unmodified app, on ESP32-S3, C3, C6 and the classic ESP32.
+- 📡 **More than a console.** Virtual WiFi access point with DHCP, DNS and NAT, buttons, rotary encoder, GPIO, UART input, touch, and display screenshots.
+- 🧪 **Assertions, not vibes.** `sim_expect` returns pass/fail and the exact line that is missing, so the agent knows what to fix.
+- ⚡ **Fast.** Emulation usually runs ahead of real time: on Apple silicon, 8 emulated seconds of a WiFi station joining a network take about 0.6 s.
+- 🤖 **Comes with a skill.** `init` installs an agent skill that teaches the write → build → simulate → fix loop, including building in Docker when ESP-IDF is not installed.
+
+## Quickstart
 
 ```bash
-npx -y esp32sim-mcp setup
+npx -y esp32sim-mcp setup                      # emulator + mask ROMs, pinned and SHA-256 verified
+cd your-esp-idf-project
+npx -y esp32sim-mcp init                       # registers the MCP server and the skill for your agents
 ```
 
-This downloads a prebuilt [esp32sim](https://github.com/mikroverk/esp32sim) into `~/.esp32sim/bin` and Espressif's mask ROM ELFs into `~/.esp32sim/roms`, both pinned and SHA-256 verified. The binaries are built from source by this repo's [emulator workflow](.github/workflows/emulator.yml) with signed build provenance (`gh attestation verify <archive> -R stramanu/esp32sim-mcp`).
+Then ask your agent for something you can see on the serial console:
 
-### 2. Configure your Agent
-From your firmware project, detect installed agents (Claude Code, Codex, Cursor) and register the MCP server plus the `esp32sim` skill that teaches the write → build → simulate → verify loop:
+> *Add a counter that prints once a second, build it, and check in the simulator that it reaches 5.*
+
+Requirements: Node.js 22+, and ESP-IDF **or** Docker to build firmware. Prebuilt emulator binaries cover macOS (Apple silicon) and Linux (x64, arm64); see [other platforms](#other-platforms).
+
+## What the agent sees
+
+From a real session, the agent calls:
+
+```json
+{
+  "tool": "sim_expect",
+  "projectDir": ".",
+  "chip": "s3",
+  "board": "none",
+  "maxSeconds": 10,
+  "patterns": ["Hello world!", "Counter: 1", "Counter: 2", "Counter: 3", "Counter: 4", "Counter: 5"]
+}
+```
+
+and gets back:
+
+```text
+### Expect Test: ✅ PASSED
+
+Matched 6 / 6 patterns.
+
+- ✅ Matched (line 54): `Hello world!`
+- ✅ Matched (line 55): `Counter: 1`
+  ...
+- ✅ Matched (line 65): `Counter: 5`
+
+#### Full UART Logs:
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x1 (POWERON),boot:0xf (SPI_FAST_FLASH_BOOT)
+...
+```
+
+When something goes wrong, it gets the panic instead (`Guru Meditation Error`, stack overflow, failed assert, heap corruption) with the log leading up to it, and the missing pattern spelled out.
+
+## Tools
+
+| Tool | What it does |
+| --- | --- |
+| `sim_run` | Boots the firmware and returns the console log, stop reason, emulated time and any panic. |
+| `sim_expect` | Runs the firmware and asserts that strings or regexes appear on the console, in order by default. |
+| `sim_script` | Drives the hardware at emulated timestamps: `press`/`release` buttons, `gpio` levels, `knob` turns, `uart`/`serial` input, `touch`, `stop`. |
+| `sim_screenshot` | Returns a PNG of the board's display at a given emulated time. |
+| `sim_list_boards` | Lists chips, boards, displays and inputs. |
+| `sim_doctor` | Checks the emulator and ROMs and says how to fix what is missing. |
+
+All tools take a `projectDir` (the ESP-IDF build is found through `build/flasher_args.json`) or explicit `appBin`/`bootloaderBin`/`ptableBin` paths, plus `chip`, `board` and `wifi` (e.g. `ssid=demo,psk=secret`). Both UART0 and the USB-Serial/JTAG console are captured, so output shows up whichever one the project logs to.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A["Coding agent<br/>(Claude Code, Codex, Cursor)"] -- "edits code,<br/>runs idf.py build<br/>(local or Docker)" --> B["ESP-IDF build/"]
+    A -- "MCP: sim_expect, sim_run, ..." --> C["esp32sim-mcp"]
+    C -- "flasher_args.json" --> B
+    C -- "spawns" --> D["esp32sim emulator<br/>mask ROM → bootloader → app"]
+    D -- "UART / USB-JTAG, panics,<br/>display, virtual WiFi" --> C
+    C -- "pass/fail, logs, PNG" --> A
+```
+
+esp32sim-mcp is a thin, tested layer: it finds the build, translates tool calls into esp32sim's command line, separates and de-duplicates the two consoles, detects panics, and shapes the result for an agent. The emulation itself is [esp32sim](https://github.com/mikroverk/esp32sim)'s work.
+
+## Use it in CI
+
+The same checks run without an agent, with exit code 0 on pass and 1 on fail. A GitHub Actions job that builds your firmware and asserts its boot log:
+
+```yaml
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Build
+        run: docker run --rm -v "$PWD:/project" -w /project espressif/idf:v5.5.4 idf.py set-target esp32s3 build
+      - name: Install the emulator
+        run: npx -y esp32sim-mcp setup
+      - name: Boot and check the console
+        run: npx -y esp32sim-mcp expect --max-seconds 10 --pattern "app_main" "Counter: 5"
+```
+
+This is what this repository's own CI does with [`examples/hello-esp32`](examples/hello-esp32), including a scripted button press.
+
+<details>
+<summary><b>All CLI commands</b></summary>
 
 ```bash
-npx -y esp32sim-mcp init              # this project: .mcp.json, .cursor/, .claude/skills, .agents/skills
-npx -y esp32sim-mcp init --global     # user level, also Claude Desktop
-npx -y esp32sim-mcp init --agent codex --dry-run
+esp32sim-mcp setup                 # install emulator + ROMs (or: install-emulator, fetch-roms)
+esp32sim-mcp init [--global] [--agent claude-code|codex|cursor|claude-desktop] [--dry-run]
+esp32sim-mcp run [-p dir] [--chip s3] [--board none] [--max-seconds 5] [--wifi ssid=x,psk=y]
+esp32sim-mcp expect --pattern "a" "b" [--unordered] [--script actions.txt] [...run options]
+esp32sim-mcp list [--chip c6]
+esp32sim-mcp doctor
+esp32sim-mcp serve                 # the MCP server (what agents launch)
 ```
+
+</details>
+
+## Supported chips and boards
+
+| Chip | Boards (`board`) |
+| --- | --- |
+| ESP32-S3 | `atech14` (default: ST7735 TFT, buttons, rotary encoder, LED ring, audio), `waveshare-lcd4b` (480×480 touch), `waveshare-amoled18-v2` (368×448 AMOLED touch), `waveshare-cam` (OV5640 camera), `none` |
+| ESP32-C3 | console only (no board models) |
+| ESP32-C6 | `waveshare-c6-lcd147` (172×320 LCD), `none` |
+| ESP32 (classic) | `ttgo-tdisplay` (135×240 TFT), `esp32dev-loopback`, `none` |
+
+Use `none` for stock ESP-IDF projects. The virtual WiFi access point works on all four chips.
+
+## Agent setup
+
+`init` detects the agents you have and configures each one. It runs in your firmware project by default; `--global` writes user-level settings instead.
 
 | Agent | MCP server (project / `--global`) | Skill (project / `--global`) |
 | --- | --- | --- |
@@ -40,159 +165,54 @@ npx -y esp32sim-mcp init --agent codex --dry-run
 | Cursor | `.cursor/mcp.json` / `~/.cursor/mcp.json` | `.cursor/skills/` / `~/.cursor/skills/` |
 | Claude Desktop | `--global` only | — |
 
-Existing entries are kept, reruns are no-ops, and a config file that does not parse is left untouched. `--no-skill` skips the skill.
-
-Or add it manually to any `mcpServers` config:
+Existing entries are kept, reruns are no-ops, and a config file that does not parse is left untouched. For any other MCP client:
 
 ```json
 {
   "mcpServers": {
-    "esp32sim": {
-      "command": "npx",
-      "args": ["-y", "esp32sim-mcp", "serve"]
-    }
+    "esp32sim": { "command": "npx", "args": ["-y", "esp32sim-mcp", "serve"] }
   }
 }
 ```
 
-### 3. Verify Your Environment
-```bash
-npx esp32sim-mcp doctor
-```
+### Other platforms
 
-#### Platforms without a prebuilt emulator
+`setup` installs prebuilt binaries on macOS arm64 and Linux x64/arm64. They are built from source by this repository's [emulator workflow](.github/workflows/emulator.yml) with signed build provenance (`gh attestation verify <archive> -R stramanu/esp32sim-mcp`). Elsewhere, build esp32sim with Cargo ([rustup](https://rustup.rs)), pinned to the commit this release is tested against:
 
-Build esp32sim with Cargo ([rustup](https://rustup.rs) installs Rust). It is not on crates.io, so it comes from git, pinned to the commit this release is tested against:
 ```bash
 cargo install --locked --git https://github.com/mikroverk/esp32sim --rev f535f3b42293a76ab64c231a0425f35857ab6cf1 esp32sim
 npx esp32sim-mcp fetch-roms
 ```
-The binary lands in `~/.cargo/bin`, where it is found automatically. `ESP32SIM_PATH` points at a binary elsewhere and `ESP32SIM_ROM_DIR` at another ROM directory; ROMs in an ESP-IDF install are found automatically.
 
----
+`ESP32SIM_PATH` points at an emulator binary elsewhere and `ESP32SIM_ROM_DIR` at another ROM directory; ROMs inside an ESP-IDF install are found automatically.
 
-## 🛠️ MCP Tools for Agents
+## How it compares
 
-When connected, coding agents gain access to the following specialized tools:
-
-| Tool | Input | Output | Description |
-| --- | --- | --- | --- |
-| `sim_run` | `projectDir`, `appBin`, `chip`, `board`, `maxSeconds` | UART console log, stop reason, exit code, panic details | Boots real mask ROM & bootloader, runs app, captures UART output and crash logs. |
-| `sim_script` | `events` (array of `press`, `release`, `gpio`, `knob`, `uart`, `serial`, `touch`, `stop`) | Timed UART logs | Injects hardware events (button presses, rotary encoder, UART RX data) at emulated timestamps. |
-| `sim_expect` | `patterns` (strings or regexes), `ordered` | Pass/Fail status, matched lines, diff of missing line | Asserts expected UART output for autonomous Red-Green-Refactor testing loops. |
-| `sim_screenshot` | `board` (e.g. `atech14`), `timeSeconds` | PNG image & base64 data | Captures the virtual ST7735/ST7789/ST7701S/CO5300 display buffer at specific emulated moment. |
-| `sim_list_boards` | `chip` (optional: `s3`, `c3`, `c6`, `esp32`) | Board specs & peripherals | Catalogs supported chips, CPU cores, displays, and peripheral buttons. |
-| `sim_doctor` | none | Environment health report | Checks the `esp32sim` binary and mask ROMs, and says how to install what is missing. |
-
-By default both UART0 and the USB-Serial/JTAG console are captured, so output shows up whichever console the project logs to; lines ESP-IDF mirrors on both are shown once. `wifi` (e.g. `ssid=demo,psk=secret`) attaches a virtual access point with DHCP, DNS and NAT.
-
----
-
-## 💻 CLI Commands (Local & CI)
-
-The same tools are available via CLI with stable exit codes (0 = pass, 1 = fail), making them drop-in ready for GitHub Actions CI:
-
-```bash
-# Run the ESP-IDF build in the current project for 5 emulated seconds
-esp32sim-mcp run --max-seconds 5
-
-# Assert UART output (patterns in order), on a virtual WiFi network
-esp32sim-mcp expect --wifi "ssid=demo,psk=demo-pass" --pattern "app_main" "GOT_IP"
-
-# Drive buttons from a timed action script
-esp32sim-mcp expect --script ./test-button-script.txt --pattern "Button pressed"
-
-# Supported boards, environment check, mask ROM download
-esp32sim-mcp list
-esp32sim-mcp doctor
-esp32sim-mcp setup          # or install-emulator / fetch-roms separately
-```
-
-`examples/hello-esp32` is a small ESP-IDF project with a button script; CI builds it and runs it this way.
-
----
-
-## 🔄 The Autonomous Agent Loop
-
-`esp32sim-mcp` ships with a standardized **Agent Skill** (`skills/esp32sim/SKILL.md`) that guides agents through embedded Test-Driven Development:
-
-```
-┌───────────────────────────────────────────┐
-│ 1. Agent writes ESP-IDF C/C++ firmware    │
-└─────────────────────┬─────────────────────┘
-                      ▼
-┌───────────────────────────────────────────┐
-│ 2. Compile: `idf.py build` (or in Docker) │
-└─────────────────────┬─────────────────────┘
-                      ▼
-┌───────────────────────────────────────────┐
-│ 3. Agent calls `sim_expect` with patterns │
-└─────────────────────┬─────────────────────┘
-                      ▼
-┌───────────────────────────────────────────┐
-│ 4. Simulator returns UART logs / Panic    │
-│    (Guru Meditation, Stack Overflow, etc.)│
-└─────────────────────┬─────────────────────┘
-                      ▼
-┌───────────────────────────────────────────┐
-│ 5. Agent inspects trace, fixes bug, reruns│
-└───────────────────────────────────────────┘
-```
-
-### Auto-Discovery of Firmware
-`esp32sim-mcp` automatically detects ESP-IDF build artifacts:
-- Parses `build/flasher_args.json` to extract precise bootloader, partition table, and application binaries without manual path configuration.
-- With bootloader, partition table and app it boots through the real mask ROM (`--boot rom`); an app image alone is loaded directly (`--boot app`).
-
----
-
-## 🎯 Supported Chips & Boards
-
-Powered by [esp32sim](https://github.com/mikroverk/esp32sim). `sim_list_boards` / `esp32sim-mcp list` show the details.
-
-| Chip | Boards (`board`) |
-| --- | --- |
-| ESP32-S3 | `atech14` (default: ST7735 TFT, buttons, rotary encoder, LED ring, audio), `waveshare-lcd4b` (480x480 touch), `waveshare-amoled18-v2` (368x448 AMOLED touch), `waveshare-cam` (OV5640 camera), `none` |
-| ESP32-C3 | console only (no board models) |
-| ESP32-C6 | `waveshare-c6-lcd147` (172x320 LCD), `none` |
-| ESP32 (classic) | `ttgo-tdisplay` (135x240 TFT), `esp32dev-loopback`, `none` |
-
-WiFi (virtual access point) works on all four chips. BLE is not exposed by this wrapper.
-
----
-
-## 📊 Landscape & Comparison
-
-| Solution | Emulates without physical board | Requires account or token | Supported in Coding Agents (MCP) |
+| | Runs without a board | Needs an account or token | Built for agents |
 | --- | :---: | :---: | :---: |
-| **esp32sim-mcp** | ✅ Yes (Local) | ❌ **No (100% Free & Open Source)** | ✅ **Yes (stdio MCP + Agent Skill)** |
-| **Wokwi CLI MCP** | ✅ Yes (Cloud/Local) | ⚠️ Yes (`WOKWI_CLI_TOKEN`) | ⚠️ Experimental |
-| **esparagus (Espressif)** | ❌ No (Needs hardware) | ❌ No | ✅ Yes (Hardware flasher) |
-| **esp32sim (Upstream)** | ✅ Yes | ❌ No | ❌ No MCP / No Skill |
+| **esp32sim-mcp** | ✅ local emulator | **No** | ✅ MCP server + skill |
+| [Wokwi CLI MCP](https://docs.wokwi.com/wokwi-ci/mcp-support) | ✅ | Yes (`WOKWI_CLI_TOKEN`) | ⚠️ experimental |
+| [esparagus](https://developer.espressif.com/blog/2026/08/esparagus-esp32-flashing-for-ci-and-agents/) (Espressif) | ❌ flashes real hardware | No | ✅ |
+| [esp32sim](https://github.com/mikroverk/esp32sim) on its own | ✅ | No | ❌ CLI and web UI |
 
----
+esparagus is the natural next step: simulate first with esp32sim-mcp, then confirm on a real board.
 
-## ⚠️ Limitations
+## Limitations
 
-- Prebuilt emulator binaries cover macOS arm64 and Linux x64/arm64; elsewhere build `esp32sim` with Cargo. `doctor` tells you what is missing.
-- The agent builds firmware itself (`idf.py build`); there is no build tool in the MCP server. Without a local ESP-IDF, the skill has it build in Espressif's `espressif/idf` Docker image instead of installing the toolchain.
+- An emulator is not silicon. Peripherals esp32sim does not model, RF timing and Bluetooth are out of reach here; confirm on hardware before you ship.
+- The agent builds the firmware itself (`idf.py`, locally or in Docker); the MCP server does not compile.
 - Windows is untested.
-- An emulator is not silicon: peripherals esp32sim does not model, RF timing and BLE are out of reach. Confirm on hardware before you ship.
 
-## 🤝 Contributing
+## Contributing
 
-Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup and how the end-to-end tests run against the real emulator, and [CHANGELOG.md](CHANGELOG.md) for what changed.
 
----
+## Credits
 
-## 🙏 Acknowledgments & Credits
+- [esp32sim](https://github.com/mikroverk/esp32sim) by Joakim Eriksson, Alice and Mattia Fiumara: the emulator that does the real work (MIT).
+- [Espressif](https://github.com/espressif): ESP-IDF and the mask ROM ELFs (Apache-2.0).
+- [Model Context Protocol](https://modelcontextprotocol.io/).
 
-- [mikroverk/esp32sim](https://github.com/mikroverk/esp32sim): The blazing-fast, instruction-level ESP32 emulator in Rust that powers the local execution engine.
-- [Espressif Systems](https://github.com/espressif): For ESP-IDF and official mask ROMs.
-- [Model Context Protocol (MCP)](https://modelcontextprotocol.io/): The open standard for connecting AI models to tools and development environments.
-
----
-
-## 📄 License
+## License
 
 MIT © [Emanuele Strazzullo](https://github.com/stramanu)

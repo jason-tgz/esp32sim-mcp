@@ -275,7 +275,10 @@ program
       process.exit(2);
     }
 
-    const scope = opts.global ? 'user' : `project (${process.cwd()})`;
+    // Paths under the home directory are shown as ~/...
+    const home = os.homedir();
+    const tilde = (p: string) => (p === home || p.startsWith(home + path.sep) ? '~' + p.slice(home.length) : p);
+    const scope = opts.global ? 'user' : `project (${tilde(process.cwd())})`;
     console.log(chalk.bold.cyan(`\n🚀 esp32sim-mcp init: ${scope}${opts.dryRun ? ', dry run' : ''}\n`));
 
     const actions = runInit({
@@ -303,7 +306,7 @@ program
       error: chalk.red('❌ error    '),
     };
     for (const a of actions) {
-      const shown = a.target.startsWith(process.cwd() + path.sep) ? path.relative(process.cwd(), a.target) : a.target;
+      const shown = a.target.startsWith(process.cwd() + path.sep) ? path.relative(process.cwd(), a.target) : tilde(a.target);
       console.log(`  ${icon[a.status]} ${chalk.bold(a.agent)} ${a.kind}: ${shown}`);
       if (a.detail) console.log(chalk.dim(`       ${a.detail}`));
     }
