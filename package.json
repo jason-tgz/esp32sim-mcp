@@ -37,6 +37,14 @@
   ],
   "author": "Emanuele Strazzullo",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stramanu/esp32sim-mcp.git"
+  },
+  "homepage": "https://github.com/stramanu/esp32sim-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/stramanu/esp32sim-mcp/issues"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.6.1",
     "chalk": "^5.4.1",

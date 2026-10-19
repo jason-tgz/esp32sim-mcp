@@ -2,7 +2,7 @@
 
 > **"Your agent writes ESP32 firmware, boots it and tests it. No board, no account."**
 
-[![CI](https://github.com/emanuelestrazzullo/esp32sim-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/emanuelestrazzullo/esp32sim-mcp/actions)
+[![CI](https://github.com/stramanu/esp32sim-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/stramanu/esp32sim-mcp/actions)
 [![npm version](https://img.shields.io/npm/v/esp32sim-mcp.svg)](https://www.npmjs.com/package/esp32sim-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -140,6 +140,14 @@ Powered by [esp32sim](https://github.com/mikroverk/esp32sim) by mikroverk:
 
 ---
 
+## 🙏 Acknowledgments & Credits
+
+- [mikroverk/esp32sim](https://github.com/mikroverk/esp32sim): The blazing-fast, instruction-level ESP32 emulator in Rust that powers the local execution engine.
+- [Espressif Systems](https://github.com/espressif): For ESP-IDF and official mask ROMs.
+- [Model Context Protocol (MCP)](https://modelcontextprotocol.io/): The open standard for connecting AI models to tools and development environments.
+
+---
+
 ## 📄 License
 
-MIT © [Emanuele Strazzullo](https://github.com/emanuelestrazzullo)
+MIT © [Emanuele Strazzullo](https://github.com/stramanu)
