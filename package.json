@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "esp32sim-mcp": "./dist/cli/index.js"
+    "esp32sim-mcp": "dist/cli/index.js"
   },
   "files": [
     "dist",
@@ -39,7 +39,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/stramanu/esp32sim-mcp.git"
+    "url": "git+https://github.com/stramanu/esp32sim-mcp.git"
   },
   "homepage": "https://github.com/stramanu/esp32sim-mcp#readme",
   "bugs": {
