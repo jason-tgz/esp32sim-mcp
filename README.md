@@ -11,7 +11,7 @@
 
 <img src="https://raw.githubusercontent.com/stramanu/esp32sim-mcp/main/docs/demo.gif" alt="Claude Code adds a counter to an ESP-IDF project, builds it and verifies it in the emulator" width="900">
 
-<sub>Real, unedited session: Claude Code edits <code>hello_world</code>, builds it with ESP-IDF in Docker and checks the UART output in the emulator.</sub>
+<sub>A real Claude Code session, recorded live (only the idle tail is trimmed): it edits ESP-IDF's <code>hello_world</code>, builds it in Docker because ESP-IDF isn't installed, and checks the console in the emulator.</sub>
 
 </div>
 
