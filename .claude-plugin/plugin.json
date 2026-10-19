@@ -1,7 +1,7 @@
 {
   "name": "esp32sim",
   "displayName": "ESP32 Simulator",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Boot and test the ESP32 firmware your agent builds in a local emulator: real mask ROM and bootloader, UART assertions, buttons, virtual WiFi, display screenshots. No board, no account.",
   "author": {
     "name": "Emanuele Strazzullo",
@@ -10,11 +10,23 @@
   "homepage": "https://github.com/stramanu/esp32sim-mcp",
   "repository": "https://github.com/stramanu/esp32sim-mcp",
   "license": "MIT",
-  "keywords": ["esp32", "esp-idf", "embedded", "firmware", "emulator", "testing", "iot"],
+  "keywords": [
+    "esp32",
+    "esp-idf",
+    "embedded",
+    "firmware",
+    "emulator",
+    "testing",
+    "iot"
+  ],
   "mcpServers": {
     "esp32sim": {
       "command": "npx",
-      "args": ["-y", "esp32sim-mcp", "serve"]
+      "args": [
+        "-y",
+        "esp32sim-mcp",
+        "serve"
+      ]
     }
   }
 }
