@@ -15,13 +15,24 @@ No physical development board. No cloud tokens. Unmodified binaries.
 ## ⚡ 1-Minute Quickstart
 
 ### 1. Configure your Agent
-Run the automatic setup wizard to detect installed agents (Claude Desktop, Cursor, Cline, Windsurf) and register the MCP server:
+From your firmware project, detect installed agents (Claude Code, Codex, Cursor) and register the MCP server plus the `esp32sim` skill that teaches the write → build → simulate → verify loop:
 
 ```bash
-npx -y esp32sim-mcp init
+npx -y esp32sim-mcp init              # this project: .mcp.json, .cursor/, .claude/skills, .agents/skills
+npx -y esp32sim-mcp init --global     # user level, also Claude Desktop
+npx -y esp32sim-mcp init --agent codex --dry-run
 ```
 
-Or add it manually to your `claude_desktop_config.json` or `.cursor/mcp.json`:
+| Agent | MCP server (project / `--global`) | Skill (project / `--global`) |
+| --- | --- | --- |
+| Claude Code | `.mcp.json` / `claude mcp add --scope user` | `.claude/skills/` / `~/.claude/skills/` |
+| Codex | `~/.codex/config.toml` (user only) | `.agents/skills/` / `~/.codex/skills/` |
+| Cursor | `.cursor/mcp.json` / `~/.cursor/mcp.json` | `.cursor/skills/` / `~/.cursor/skills/` |
+| Claude Desktop | `--global` only | — |
+
+Existing entries are kept, reruns are no-ops, and a config file that does not parse is left untouched. `--no-skill` skips the skill.
+
+Or add it manually to any `mcpServers` config:
 
 ```json
 {

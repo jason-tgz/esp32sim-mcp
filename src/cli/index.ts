@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import chalk from 'chalk';
-import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { runDoctor } from '../core/binary.js';
+import { AgentId, ALL_AGENTS, runInit } from '../core/init.js';
 import { getBoardsByChip, SUPPORTED_BOARDS } from '../core/boards.js';
 import { runExpect } from '../core/expect.js';
 import { runSimulation } from '../core/runner.js';
@@ -191,108 +191,58 @@ program
     console.log('');
   });
 
-// 6. Init command (auto-configures Claude Desktop, Cursor, Cline, etc.)
+// 6. Init command: writes MCP config and the agent skill for detected coding agents
 program
   .command('init')
-  .description('Automatically detect coding agents (Claude Desktop, Cursor, Windsurf) and write MCP configuration')
-  .action(() => {
-    console.log(chalk.bold.cyan('\n🚀 esp32sim-mcp: Initializing Agent Configuration\n'));
-    const home = os.homedir();
-    const platform = os.platform();
-
-    interface TargetConfig {
-      name: string;
-      configPath: string;
+  .description('Detect coding agents (Claude Code, Codex, Cursor, Claude Desktop) and write MCP config + skill')
+  .option('-g, --global', 'Configure user-level settings instead of this project')
+  .option('--agent <agents...>', `Only configure these agents: ${ALL_AGENTS.join(', ')}`)
+  .option('--no-skill', 'Do not install the esp32sim agent skill')
+  .option('--dry-run', 'Show what would change without writing anything')
+  .action((opts) => {
+    const agents: AgentId[] | undefined = opts.agent;
+    const unknown = agents?.filter((a) => !ALL_AGENTS.includes(a));
+    if (unknown && unknown.length > 0) {
+      console.error(chalk.red(`Unknown agent(s): ${unknown.join(', ')}. Choose from: ${ALL_AGENTS.join(', ')}`));
+      process.exit(2);
     }
 
-    const targets: TargetConfig[] = [];
+    const scope = opts.global ? 'user' : `project (${process.cwd()})`;
+    console.log(chalk.bold.cyan(`\n🚀 esp32sim-mcp init: ${scope}${opts.dryRun ? ', dry run' : ''}\n`));
 
-    // Claude Desktop
-    if (platform === 'darwin') {
-      targets.push({
-        name: 'Claude Desktop',
-        configPath: path.join(home, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json'),
-      });
-    } else if (platform === 'win32') {
-      targets.push({
-        name: 'Claude Desktop',
-        configPath: path.join(process.env.APPDATA || '', 'Claude', 'claude_desktop_config.json'),
-      });
-    } else {
-      targets.push({
-        name: 'Claude Desktop',
-        configPath: path.join(home, '.config', 'Claude', 'claude_desktop_config.json'),
-      });
-    }
-
-    // Cursor
-    targets.push({
-      name: 'Cursor (Workspace)',
-      configPath: path.resolve('.cursor', 'mcp.json'),
-    });
-    targets.push({
-      name: 'Cursor (Global)',
-      configPath: path.join(home, '.cursor', 'mcp.json'),
+    const actions = runInit({
+      cwd: process.cwd(),
+      home: os.homedir(),
+      platform: os.platform(),
+      appData: process.env.APPDATA,
+      global: opts.global,
+      agents,
+      skill: opts.skill,
+      dryRun: opts.dryRun,
     });
 
-    let modifiedCount = 0;
-
-    for (const t of targets) {
-      const exists = fs.existsSync(t.configPath);
-      const dirExists = fs.existsSync(path.dirname(t.configPath));
-
-      if (exists || dirExists) {
-        try {
-          let json: any = { mcpServers: {} };
-          if (exists) {
-            const raw = fs.readFileSync(t.configPath, 'utf-8');
-            try {
-              json = JSON.parse(raw);
-            } catch {
-              json = { mcpServers: {} };
-            }
-          }
-          if (!json.mcpServers) json.mcpServers = {};
-
-          json.mcpServers['esp32sim'] = {
-            command: 'npx',
-            args: ['-y', 'esp32sim-mcp', 'serve'],
-          };
-
-          fs.mkdirSync(path.dirname(t.configPath), { recursive: true });
-          fs.writeFileSync(t.configPath, JSON.stringify(json, null, 2), 'utf-8');
-          console.log(chalk.green(`  ✅ Configured ${t.name} at: ${t.configPath}`));
-          modifiedCount++;
-        } catch (err: any) {
-          console.log(chalk.yellow(`  ⚠️ Could not write ${t.name}: ${err?.message}`));
-        }
-      }
+    if (actions.length === 0) {
+      console.log(chalk.yellow('No coding agent detected. Pick one explicitly, e.g.:'));
+      console.log(chalk.yellow('  npx esp32sim-mcp init --agent claude-code'));
+      process.exit(1);
     }
 
-    if (modifiedCount === 0) {
-      // Default to workspace .cursor/mcp.json
-      const wsConfig = path.resolve('.cursor', 'mcp.json');
-      fs.mkdirSync(path.dirname(wsConfig), { recursive: true });
-      fs.writeFileSync(
-        wsConfig,
-        JSON.stringify(
-          {
-            mcpServers: {
-              esp32sim: {
-                command: 'npx',
-                args: ['-y', 'esp32sim-mcp', 'serve'],
-              },
-            },
-          },
-          null,
-          2
-        ),
-        'utf-8'
-      );
-      console.log(chalk.green(`  ✅ Created workspace MCP configuration at ${wsConfig}`));
+    const icon: Record<string, string> = {
+      written: chalk.green('✅ written  '),
+      unchanged: chalk.gray('·  unchanged'),
+      'would-write': chalk.cyan('…  would write'),
+      skipped: chalk.yellow('⚠️ skipped  '),
+      error: chalk.red('❌ error    '),
+    };
+    for (const a of actions) {
+      const shown = a.target.startsWith(process.cwd() + path.sep) ? path.relative(process.cwd(), a.target) : a.target;
+      console.log(`  ${icon[a.status]} ${chalk.bold(a.agent)} ${a.kind}: ${shown}`);
+      if (a.detail) console.log(chalk.dim(`       ${a.detail}`));
     }
 
-    console.log(chalk.bold.green('\n🎉 MCP server setup complete!\n'));
+    if (actions.some((a) => a.status === 'error')) process.exit(1);
+    if (opts.dryRun) return;
+    console.log(chalk.bold.green('\n🎉 Done. Restart your agent, then run `npx esp32sim-mcp doctor` to check the emulator.\n'));
   });
 
 program.parse(process.argv);
