@@ -4,6 +4,8 @@ All notable changes are documented here. The project follows [Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-19
+
 ### Fixed
 - Install instructions: esp32sim is not on crates.io; `doctor` and the docs now give a `cargo install --git` command pinned to the tested esp32sim commit.
 
