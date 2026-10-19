@@ -1,0 +1,16 @@
+{
+  "name": "esp32sim-mcp",
+  "description": "esp32sim-mcp: boot and test ESP32 firmware in a local emulator from Claude Code.",
+  "owner": {
+    "name": "Emanuele Strazzullo",
+    "url": "https://github.com/stramanu"
+  },
+  "plugins": [
+    {
+      "name": "esp32sim",
+      "source": "./",
+      "description": "Boot and test ESP32 firmware in a local emulator: MCP server plus the esp32sim skill.",
+      "category": "development"
+    }
+  ]
+}

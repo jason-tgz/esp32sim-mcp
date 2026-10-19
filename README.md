@@ -165,7 +165,15 @@ Use `none` for stock ESP-IDF projects. The virtual WiFi access point works on al
 | Cursor | `.cursor/mcp.json` / `~/.cursor/mcp.json` | `.cursor/skills/` / `~/.cursor/skills/` |
 | Claude Desktop | `--global` only | — |
 
-Existing entries are kept, reruns are no-ops, and a config file that does not parse is left untouched. For any other MCP client:
+Existing entries are kept, reruns are no-ops, and a config file that does not parse is left untouched.
+
+**Claude Code plugin.** Instead of `init`, install the server and skill together as a plugin, for every project:
+
+```
+/plugin install esp32sim --marketplace stramanu/esp32sim-mcp
+```
+
+**MCP registry.** The server is published to the [official MCP registry](https://registry.modelcontextprotocol.io) as `io.github.stramanu/esp32sim-mcp`. For any other MCP client:
 
 ```json
 {

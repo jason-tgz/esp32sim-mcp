@@ -45,6 +45,19 @@ jobs:
             npm publish --provenance --access public --ignore-scripts
           fi
 
+      # The official MCP registry (registry.modelcontextprotocol.io), via GitHub OIDC like npm above
+      - name: Publish to the MCP registry (skipped if this version is listed)
+        run: |
+          name=$(node -p "require('./server.json').name")
+          version=$(node -p "require('./server.json').version")
+          if curl -fsS "https://registry.modelcontextprotocol.io/v0.1/servers?search=$name&version=latest" | grep -q "\"version\":\"$version\""; then
+            echo "$name@$version is already in the MCP registry"
+          else
+            curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+            ./mcp-publisher login github-oidc
+            ./mcp-publisher publish
+          fi
+
       - name: GitHub release
         env:
           GH_TOKEN: ${{ github.token }}

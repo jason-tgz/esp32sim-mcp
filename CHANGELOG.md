@@ -4,6 +4,13 @@ All notable changes are documented here. The project follows [Semantic Versionin
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-10-19
+
+### Added
+- Claude Code plugin: `/plugin install esp32sim --marketplace stramanu/esp32sim-mcp` installs the MCP server and the skill together.
+- Published to the official MCP registry as `io.github.stramanu/esp32sim-mcp`, from the release workflow via GitHub OIDC.
+- `glama.json` for the Glama MCP directory.
+
 ## [0.2.4] - 2026-10-19
 
 ### Fixed

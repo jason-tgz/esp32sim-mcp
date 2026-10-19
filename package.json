@@ -19,7 +19,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "npm run build && npm test"
+    "prepublishOnly": "npm run build && npm test",
+    "version": "node scripts/sync-version.mjs && git add server.json .claude-plugin/plugin.json"
   },
   "keywords": [
     "esp32",
@@ -59,5 +60,6 @@
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
-  }
+  },
+  "mcpName": "io.github.stramanu/esp32sim-mcp"
 }

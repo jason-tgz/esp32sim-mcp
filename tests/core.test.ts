@@ -162,3 +162,18 @@ describe('Pattern syntax', () => {
     expect(() => parsePattern('/Counter: (/')).toThrow(/Invalid regex pattern/);
   });
 });
+
+describe('Release manifests', () => {
+  const root = path.resolve(__dirname, '..');
+  const read = (f: string) => JSON.parse(fs.readFileSync(path.join(root, f), 'utf-8'));
+
+  it('carry the package.json version and MCP registry name', () => {
+    const pkg = read('package.json');
+    const server = read('server.json');
+    expect(server.name).toBe(pkg.mcpName);
+    expect(server.version).toBe(pkg.version);
+    expect(server.packages[0]).toMatchObject({ identifier: pkg.name, version: pkg.version });
+    expect(server.description.length).toBeLessThanOrEqual(100);
+    expect(read('.claude-plugin/plugin.json').version).toBe(pkg.version);
+  });
+});

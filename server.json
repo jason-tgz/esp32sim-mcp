@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.stramanu/esp32sim-mcp",
+  "title": "ESP32 Simulator",
+  "description": "Boot and test ESP32 firmware in a local emulator: UART asserts, buttons, virtual WiFi, screenshots.",
+  "repository": {
+    "url": "https://github.com/stramanu/esp32sim-mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/stramanu/esp32sim-mcp",
+  "version": "0.2.4",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "esp32sim-mcp",
+      "version": "0.2.4",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
