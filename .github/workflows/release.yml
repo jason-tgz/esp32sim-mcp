@@ -53,6 +53,8 @@ jobs:
           if curl -fsS "https://registry.modelcontextprotocol.io/v0.1/servers?search=$name&version=latest" | grep -q "\"version\":\"$version\""; then
             echo "$name@$version is already in the MCP registry"
           else
+            # The registry checks the npm package, which takes a few minutes to appear after publishing
+            for i in $(seq 1 40); do npm view "esp32sim-mcp@$version" version >/dev/null 2>&1 && break; sleep 15; done
             curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
             ./mcp-publisher login github-oidc
             ./mcp-publisher publish
