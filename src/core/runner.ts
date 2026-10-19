@@ -6,6 +6,7 @@ import stripAnsi from 'strip-ansi';
 import { resolveEsp32SimBinary, resolveRomPath } from './binary.js';
 import { getBoardById } from './boards.js';
 import { resolveFirmware } from './firmware.js';
+import { demuxConsoles } from './console.js';
 import { writeTempScript } from './script.js';
 import { SimResult, SimRunOptions } from './types.js';
 
@@ -105,12 +106,12 @@ export async function runSimulation(options: SimRunOptions): Promise<SimResult> 
     args.push('--stop-after-exceptions', options.stopAfterExceptions.toString());
   }
 
-  // Console output
-  if (options.console) {
-    args.push('--console', options.console);
-  } else {
-    args.push('--console', 'uart0');
-  }
+  // Console output: UART0 and USB-Serial/JTAG by default, since many S3/C3/C6 projects log over USB.
+  // Several consoles interleave mid-line, so tag them and split them back afterwards.
+  const consoleMode = options.console ?? 'both';
+  const multiConsole = consoleMode === 'both' || consoleMode === 'all';
+  args.push('--console', consoleMode);
+  if (multiConsole) args.push('--console-prefix');
 
   // Networking / WiFi
   if (options.wifi) {
@@ -202,7 +203,9 @@ export async function runSimulation(options: SimRunOptions): Promise<SimResult> 
       const wallClock = Date.now() - startTime;
       const cleanStdout = options.stripAnsi !== false ? stripAnsi(stdoutData) : stdoutData;
       const cleanStderr = options.stripAnsi !== false ? stripAnsi(stderrData) : stderrData;
-      const combinedLogs = cleanStdout + (cleanStderr ? '\n' + cleanStderr : '');
+      const consoles = multiConsole ? demuxConsoles(cleanStdout) : undefined;
+      const uartLogs = consoles ? consoles.merged : cleanStdout;
+      const combinedLogs = uartLogs + (cleanStderr ? '\n' + cleanStderr : '');
 
       // Exception detection
       const foundExceptions: string[] = [];
@@ -252,7 +255,8 @@ export async function runSimulation(options: SimRunOptions): Promise<SimResult> 
         success: !hasCrashed && !timedOut && (code === 0 || code === null),
         exitCode: code ?? (timedOut ? 124 : 0),
         stopReason,
-        uartLogs: cleanStdout,
+        uartLogs,
+        consoles: consoles?.bySource,
         rawStdout: stdoutData,
         rawStderr: stderrData,
         emulatedSeconds,

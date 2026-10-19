@@ -47,6 +47,7 @@ Boots the firmware in `esp32sim` and returns UART console logs, duration, stop r
   - `board`: Board model: `'atech14'` (S3 default), `'waveshare-lcd4b'`, `'waveshare-amoled18-v2'`, `'waveshare-cam'`, `'waveshare-c6-lcd147'` (C6), `'ttgo-tdisplay'` (ESP32), or `'none'` for a bare module (stock ESP-IDF examples). Omit it on the C3. Use `sim_list_boards` for details.
   - `maxSeconds`: Emulated seconds limit (default `10`). Emulation usually runs faster than real time.
   - `wifi`: Attach a virtual access point with DHCP/DNS/NAT, e.g. `'ssid=demo,psk=secret'` (a bare SSID means an open network). The station gets `10.0.2.15`. Also accepted by `sim_expect` and `sim_script`.
+  - `console`: `'both'` by default (UART0 + USB-Serial/JTAG), so output is captured whichever console the project uses. Lines ESP-IDF mirrors on both consoles are shown once; pass `'uart0'` or `'usb'` to see a single console.
   - `stopAfterExceptions`: Leave unset. It counts *every* CPU exception, including the window overflows Xtensa code takes constantly, so `1` stops before the bootloader. Panics are detected from the log anyway.
 
 ### 2. `sim_expect` (Recommended for Tests)

@@ -42,7 +42,7 @@ program
   .option('--board <board>', 'Board model to emulate (e.g. atech14)')
   .option('-s, --max-seconds <n>', 'Maximum emulated seconds', parseFloat, 10)
   .option('--stop-after-exceptions <n>', 'Stop after N exceptions', parseInt)
-  .option('--console <source>', 'Console source (uart0, usb, both, all, none)', 'uart0')
+  .option('--console <source>', 'Console source: uart0, usb, both (default), all, none')
   .option('--wifi <spec>', "Virtual access point: 'ssid=demo,psk=secret' or a bare SSID (open network)")
   .option('--tft-png <path>', 'Save LCD screenshot to PNG')
   .option('--script <path>', 'Path to interaction script')

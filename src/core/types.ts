@@ -119,7 +119,7 @@ export interface SimRunOptions {
   maxSeconds?: number; // Emulated seconds (default 10)
   timeoutMs?: number; // Real-world timeout in ms (default 30000)
   stopAfterExceptions?: number; // Stop after N CPU exceptions (unset by default: Xtensa window exceptions are normal)
-  console?: 'uart0' | 'usb' | 'both' | 'all' | 'none';
+  console?: 'uart0' | 'usb' | 'both' | 'all' | 'none'; // Default 'both'
   wifi?: string; // Virtual AP spec (`ssid=demo,psk=secret`) or a bare SSID for an open network
   net?: 'nat' | 'none';
   tftPng?: string; // Output path for display snapshot
@@ -138,6 +138,8 @@ export interface SimResult {
   exitCode: number;
   stopReason: 'timeout' | 'exception' | 'exception_limit' | 'script_stop' | 'completed' | 'error';
   uartLogs: string;
+  /** Per-console text when several consoles were captured */
+  consoles?: Partial<Record<'usb' | 'uart0' | 'uart1' | 'uart2' | 'untagged', string>>;
   rawStdout: string;
   rawStderr: string;
   emulatedSeconds?: number;

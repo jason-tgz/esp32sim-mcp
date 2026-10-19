@@ -121,7 +121,8 @@ export function createMcpServer(): Server {
               console: {
                 type: 'string',
                 enum: ['uart0', 'usb', 'both', 'all', 'none'],
-                description: 'Console source to capture (default: uart0).',
+                description: 'Console source to capture (default: both = UART0 + USB-Serial/JTAG). ' +
+                  'Lines ESP-IDF mirrors on both consoles are shown once.',
               },
               wifi: WIFI_SCHEMA,
             },
@@ -233,7 +234,7 @@ export function createMcpServer(): Server {
           board: args?.board as string,
           maxSeconds: (args?.maxSeconds as number) ?? 10,
           stopAfterExceptions: args?.stopAfterExceptions as number | undefined,
-          console: (args?.console as any) ?? 'uart0',
+          console: args?.console as any,
           wifi: args?.wifi as string,
         });
 

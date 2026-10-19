@@ -25,6 +25,8 @@ describe.skipIf(!HAS_EMULATOR)('End-to-End Real esp32sim Simulation', () => {
     expect(res.uartLogs).toContain('ESP-ROM:esp32s3');
     expect(res.uartLogs).toContain('Hello world!');
     expect(res.uartLogs).toContain('This is esp32s3 chip with 2 CPU core(s)');
+    // Default console is UART0 + USB-JTAG: the mirrored line comes back once and intact
+    expect(res.uartLogs.split('\n').filter((l) => l === 'Hello world!')).toHaveLength(1);
   });
 
   it('runs sim_expect with assertions on real UART boot logs', async () => {
@@ -64,6 +66,21 @@ describe.skipIf(!HAS_EMULATOR)('End-to-End Real esp32sim Simulation', () => {
 
     // Clean up
     fs.unlinkSync(tmpPng);
+  });
+
+  it('joins the virtual WiFi network with the default console (USB-JTAG logs)', async () => {
+    const res = await runExpect({
+      chip: 's3',
+      appBin: path.join(FIXTURES_DIR, 's3-wifi_station.bin'),
+      bootloaderBin: path.join(FIXTURES_DIR, 's3-wifi-bootloader.bin'),
+      ptableBin: path.join(FIXTURES_DIR, 's3-wifi-ptable.bin'),
+      wifi: 'ssid=esp32sim,psk=esp32sim-pass',
+      maxSeconds: 8,
+      patterns: ['station: CONNECTED', 'station: GOT_IP ip=10.0.2.15', 'station: PING seq=1'],
+    });
+
+    expect(res.diffSummary).toBeUndefined();
+    expect(res.passed).toBe(true);
   });
 
   it('reports a script stop as script_stop with the emulated time', async () => {
