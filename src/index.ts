@@ -10,4 +10,8 @@ export * from './core/firmware.js';
 export * from './core/script.js';
 export * from './core/runner.js';
 export * from './core/expect.js';
+export * from './core/console.js';
+export * from './core/init.js';
+export * from './core/roms.js';
+export { VERSION } from './version.js';
 export * from './mcp/server.js';

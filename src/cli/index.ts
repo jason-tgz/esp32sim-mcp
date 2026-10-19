@@ -10,13 +10,14 @@ import { getBoardsByChip, SUPPORTED_BOARDS } from '../core/boards.js';
 import { runExpect } from '../core/expect.js';
 import { runSimulation } from '../core/runner.js';
 import { startMcpServer } from '../mcp/server.js';
+import { VERSION } from '../version.js';
 
 const program = new Command();
 
 program
   .name('esp32sim-mcp')
   .description('Run, test and debug ESP32 firmware in a local emulator via MCP, CLI and agent skill')
-  .version('0.1.0');
+  .version(VERSION);
 
 // 1. MCP Server command
 program

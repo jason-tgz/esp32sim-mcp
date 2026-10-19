@@ -169,6 +169,19 @@ WiFi (virtual access point) works on all four chips. BLE is not exposed by this 
 
 ---
 
+## ⚠️ Limitations
+
+- The emulator is not bundled: build `esp32sim` with Cargo once (see above). `doctor` tells you what is missing.
+- The agent builds firmware itself with ESP-IDF (`idf.py build`); there is no build tool in the MCP server.
+- Windows is untested.
+- An emulator is not silicon: peripherals esp32sim does not model, RF timing and BLE are out of reach. Confirm on hardware before you ship.
+
+## 🤝 Contributing
+
+Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
+
+---
+
 ## 🙏 Acknowledgments & Credits
 
 - [mikroverk/esp32sim](https://github.com/mikroverk/esp32sim): The blazing-fast, instruction-level ESP32 emulator in Rust that powers the local execution engine.

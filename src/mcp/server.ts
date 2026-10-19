@@ -15,6 +15,7 @@ import { getBoardsByChip, SUPPORTED_BOARDS } from '../core/boards.js';
 import { runExpect } from '../core/expect.js';
 import { runSimulation } from '../core/runner.js';
 import { SimEvent } from '../core/types.js';
+import { VERSION } from '../version.js';
 
 const CHIP_SCHEMA = {
   type: 'string',
@@ -83,7 +84,7 @@ export function createMcpServer(): Server {
   const server = new Server(
     {
       name: 'esp32sim-mcp',
-      version: '0.1.0',
+      version: VERSION,
     },
     {
       capabilities: {

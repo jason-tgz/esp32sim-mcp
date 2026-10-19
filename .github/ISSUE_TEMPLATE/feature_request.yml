@@ -1,0 +1,15 @@
+name: Feature request
+description: A tool, option or board you need
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What do you want the agent (or CLI) to be able to do?
+    validations:
+      required: true
+  - type: textarea
+    id: upstream
+    attributes:
+      label: Does esp32sim already support it?
+      description: Link the esp32sim flag or doc if you know it. Emulator features themselves belong upstream.

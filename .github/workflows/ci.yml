@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_call:
 
 env:
   # The emulator version the E2E job builds and tests against; bump deliberately.
