@@ -4,6 +4,12 @@ All notable changes are documented here. The project follows [Semantic Versionin
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-19
+
+### Changed
+- README rewritten around a real demo session, with a CI recipe and an architecture diagram.
+- `init` shows paths under your home directory as `~/...`.
+
 ## [0.2.1] - 2026-10-19
 
 ### Changed
