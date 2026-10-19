@@ -52,9 +52,9 @@ Or add it manually to any `mcpServers` config:
 npx esp32sim-mcp doctor
 ```
 
-If you don't have the `esp32sim` emulator yet, build it with Cargo ([rustup](https://rustup.rs) installs Rust):
+If you don't have the `esp32sim` emulator yet, build it with Cargo ([rustup](https://rustup.rs) installs Rust). esp32sim is not on crates.io, so it comes from git, pinned to the commit this release is tested against (a few minutes the first time):
 ```bash
-cargo install --git https://github.com/mikroverk/esp32sim esp32sim
+cargo install --locked --git https://github.com/mikroverk/esp32sim --rev f535f3b42293a76ab64c231a0425f35857ab6cf1 esp32sim
 ```
 It lands in `~/.cargo/bin`, where it is found automatically; `ESP32SIM_PATH` points at a binary elsewhere.
 

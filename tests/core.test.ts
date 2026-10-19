@@ -4,7 +4,9 @@ import { getBoardsByChip, getBoardById, SUPPORTED_BOARDS } from '../src/core/boa
 import { serializeScriptEvents } from '../src/core/script.js';
 import { normalizeWifiSpec } from '../src/core/runner.js';
 import { checkExpectations } from '../src/core/expect.js';
-import { runDoctor } from '../src/core/binary.js';
+import { ESP32SIM_TESTED_REV, runDoctor } from '../src/core/binary.js';
+import * as fs from 'fs';
+import * as path from 'path';
 
 describe('Chip & Board Registry', () => {
   it('normalizes chip names correctly', () => {
@@ -135,5 +137,12 @@ describe('Doctor & Environment Check', () => {
     expect(doc.platform).toBeDefined();
     expect(doc.arch).toBeDefined();
     expect(Array.isArray(doc.recommendations)).toBe(true);
+  });
+});
+
+describe('Pinned emulator version', () => {
+  it('tells users to install the esp32sim commit CI tests against', () => {
+    const ci = fs.readFileSync(path.resolve(__dirname, '../.github/workflows/ci.yml'), 'utf-8');
+    expect(ci).toContain(`ESP32SIM_REF: ${ESP32SIM_TESTED_REV}`);
   });
 });

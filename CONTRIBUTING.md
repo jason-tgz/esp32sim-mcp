@@ -18,7 +18,7 @@ Node.js 22+ is required.
 The end-to-end tests boot firmware in [esp32sim](https://github.com/mikroverk/esp32sim). To run them locally:
 
 ```bash
-cargo install --git https://github.com/mikroverk/esp32sim esp32sim   # or set ESP32SIM_PATH
+cargo install --locked --git https://github.com/mikroverk/esp32sim --rev f535f3b42293a76ab64c231a0425f35857ab6cf1 esp32sim   # or set ESP32SIM_PATH
 node dist/cli/index.js fetch-roms                                    # after npm run build
 ```
 
@@ -29,7 +29,7 @@ docker run --rm -v "$PWD/examples/hello-esp32:/project" -w /project \
   espressif/idf:v5.5.4 idf.py set-target esp32s3 build
 ```
 
-`ESP32SIM_REQUIRE_E2E=1 npm test` turns a missing emulator, ROM or example build into a failure instead of a skip. CI runs that way, against the esp32sim commit pinned in `.github/workflows/ci.yml`.
+`ESP32SIM_REQUIRE_E2E=1 npm test` turns a missing emulator, ROM or example build into a failure instead of a skip. CI runs that way, against the esp32sim commit pinned in `.github/workflows/ci.yml`. To move to a newer esp32sim, bump `ESP32SIM_REF` there and `ESP32SIM_TESTED_REV` in `src/core/binary.ts` together.
 
 ## Guidelines
 

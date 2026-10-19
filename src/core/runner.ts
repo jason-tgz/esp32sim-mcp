@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import stripAnsi from 'strip-ansi';
-import { resolveEsp32SimBinary, resolveRomPath } from './binary.js';
+import { ESP32SIM_INSTALL_COMMAND, resolveEsp32SimBinary, resolveRomPath } from './binary.js';
 import { getBoardById } from './boards.js';
 import { resolveFirmware } from './firmware.js';
 import { demuxConsoles } from './console.js';
@@ -48,7 +48,7 @@ export async function runSimulation(options: SimRunOptions): Promise<SimResult> 
   if (!binaryPath) {
     throw new Error(
       'esp32sim binary not found in PATH or ~/.esp32sim/bin. ' +
-      'Run `esp32sim-mcp doctor` or `cargo install --git https://github.com/mikroverk/esp32sim esp32sim` to install it.'
+      `Build it with \`${ESP32SIM_INSTALL_COMMAND}\`, or run \`esp32sim-mcp doctor\`.`
     );
   }
 

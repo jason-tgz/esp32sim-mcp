@@ -4,6 +4,12 @@ import * as os from 'os';
 import * as path from 'path';
 import { DoctorResult } from './types.js';
 
+// The esp32sim commit CI tests against (keep in sync with ESP32SIM_REF in .github/workflows/ci.yml).
+// esp32sim is not on crates.io and publishes no binaries, so it is built from git.
+export const ESP32SIM_TESTED_REV = 'f535f3b42293a76ab64c231a0425f35857ab6cf1';
+export const ESP32SIM_INSTALL_COMMAND =
+  `cargo install --locked --git https://github.com/mikroverk/esp32sim --rev ${ESP32SIM_TESTED_REV} esp32sim`;
+
 /**
  * Searches for the esp32sim binary in candidate locations
  */
@@ -143,7 +149,8 @@ export function runDoctor(customPath?: string): DoctorResult {
     }
   } else {
     recommendations.push(
-      'esp32sim emulator is not installed. Run `cargo install --git https://github.com/mikroverk/esp32sim esp32sim` or download precompiled binary to ~/.esp32sim/bin/'
+      `esp32sim emulator is not installed. Build it with \`${ESP32SIM_INSTALL_COMMAND}\` ` +
+        '(needs Rust: https://rustup.rs), or set ESP32SIM_PATH to an existing binary.'
     );
   }
 
@@ -163,7 +170,7 @@ export function runDoctor(customPath?: string): DoctorResult {
     rustInstalled = true;
     rustVersion = cargoOut;
   } catch {
-    if (!esp32simFound) recommendations.push('Rust/Cargo is not installed in PATH. Installing Rust lets you build esp32sim locally with `cargo install esp32sim`.');
+    if (!esp32simFound) recommendations.push('Rust/Cargo is not installed. Install it from https://rustup.rs, then build esp32sim as above.');
   }
 
   // Check ESP-IDF environment (optional, for compiling from source)
@@ -179,9 +186,6 @@ export function runDoctor(customPath?: string): DoctorResult {
     }
   }
 
-  if (!esp32simFound && rustInstalled) {
-    recommendations.push('Quick setup: run `cargo install --git https://github.com/mikroverk/esp32sim esp32sim` to compile and install the simulator.');
-  }
 
   return {
     esp32simFound,
